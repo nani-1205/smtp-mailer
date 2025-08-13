@@ -21,7 +21,7 @@ ENV GOOS=linux
 RUN go build -o /app/smtp-mailer ./main.go
 
 # Stage 2: Create the final lean image
-FROM alpine:latest
+FROM alpine:3.19
 
 WORKDIR /app
 
