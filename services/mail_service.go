@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"crypto/tls" // <-- ADDED: Needed for tls.Config
+	"crypto/tls" // Needed for tls.Config
 
 	"smtp-mailer/config"
 	"smtp-mailer/database"
 
-	mail "github.com/go-gomail/gomail/v2" // Corrected import path
+	mail "gopkg.in/gomail.v2" // <-- IMPORTANT: Change this import back to gopkg.in
 )
 
 // MailService handles sending emails and logging to DB
@@ -86,7 +86,7 @@ func (s *MailService) SendEmailAndLog(to, subject, body string) error {
 		ServerName: host,
 		// InsecureSkipVerify should ONLY be set to true for debugging or specific non-production environments.
 		// It makes the connection vulnerable to man-in-the-middle attacks.
-		InsecureSkipVerify: s.config.SkipTLSVerify, // <-- USED CONFIG FIELD HERE
+		InsecureSkipVerify: s.config.SkipTLSVerify,
 	}
 	d.TLSConfig = tlsConfig
 

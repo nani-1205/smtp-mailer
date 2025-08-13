@@ -18,7 +18,7 @@ type Config struct {
 	UseSTARTTLS       bool
 	DailyMailLimit    int
 	DatabaseURL       string
-	SkipTLSVerify     bool // <-- ADDED: Option to skip TLS certificate verification
+	SkipTLSVerify     bool // Ensure this is present
 }
 
 // LoadConfig reads configuration from .env file
@@ -26,7 +26,6 @@ func LoadConfig() (*Config, error) {
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("No .env file found, using environment variables directly.")
-		// This is not an error if running in a container with env vars
 	}
 
 	dailyLimitStr := os.Getenv("DAILY_MAIL_LIMIT")
@@ -40,11 +39,11 @@ func LoadConfig() (*Config, error) {
 		MailHub:           os.Getenv("MAILHUB"),
 		AuthUser:          os.Getenv("AUTHUSER"),
 		AuthPass:          os.Getenv("AUTHPASS"),
-		FromLineOverride:  os.Getenv("FROMLINEOVERRIDE"), // "YES" or "NO"
+		FromLineOverride:  os.Getenv("FROMLINEOVERRIDE"),
 		UseTLS:            os.Getenv("USETLS") == "YES",
 		UseSTARTTLS:       os.Getenv("USESTARTTLS") == "YES",
 		DailyMailLimit:    dailyLimit,
 		DatabaseURL:       os.Getenv("DATABASE_URL"),
-		SkipTLSVerify:     os.Getenv("SKIP_TLS_VERIFY") == "YES", // <-- ADDED: Load SKIP_TLS_VERIFY
+		SkipTLSVerify:     os.Getenv("SKIP_TLS_VERIFY") == "YES", // Ensure this is present
 	}, nil
 }
