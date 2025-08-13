@@ -4,16 +4,16 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"net/smtp" // Keep this import for the illustrative sendEmailNoAuth function
+	"net/smtp" // Keep for sendEmailNoAuth
 	"strconv"
 	"strings"
 	"time"
-	"crypto/tls" // Needed for tls.Config
+	"crypto/tls"
 
 	"smtp-mailer/config"
-	"smtp-mailer/database"
+	// "smtp-mailer/database" // <-- REMOVE THIS LINE, IT'S NOT USED DIRECTLY HERE
 
-	mail "gopkg.in/gomail.v2" // <-- IMPORTANT: Change this import back to gopkg.in
+	mail "gopkg.in/gomail.v2"
 )
 
 // MailService handles sending emails and logging to DB
@@ -43,6 +43,9 @@ func (s *MailService) SendEmailAndLog(to, subject, body string) error {
 
 	// Defer logging the email attempt regardless of success or failure
 	defer func() {
+		// Note: database.EmailLog struct is defined in database/models.go but the
+		// INSERT query here uses generic SQL string. The `database` package itself
+		// is imported by main.go (for InitDB) and handlers/api_handlers.go (for EmailLog struct).
 		_, dbErr := s.db.Exec(
 			"INSERT INTO email_logs (sent_to, subject, body_preview, status, sent_at) VALUES ($1, $2, $3, $4, $5)",
 			to, subject, bodyPreview, status, time.Now(),
@@ -67,25 +70,20 @@ func (s *MailService) SendEmailAndLog(to, subject, body string) error {
 
 	// Create a new message
 	m := mail.NewMessage()
-	m.SetHeader("From", s.config.AuthUser) // Default From header
+	m.SetHeader("From", s.config.AuthUser)
 	if s.config.FromLineOverride == "YES" {
-		// If FromLineOverride is YES, the "From" header can potentially be modified by the SMTP server
-		// Or if we were allowing an API client to specify a "From" address, this is where it would go.
-		// For this simple case, we just use AuthUser as the actual sender.
+		// ... (logic remains same)
 	}
 	m.SetHeader("To", to)
 	m.SetHeader("Subject", subject)
-	m.SetBody("text/plain", body) // Can also be "text/html"
+	m.SetBody("text/plain", body)
 
 	// Set up dialer
 	d := mail.NewDialer(host, port, s.config.AuthUser, s.config.AuthPass)
 
-	// Configure TLS: Always set ServerName for proper certificate validation.
-	// Conditionally set InsecureSkipVerify based on config.
+	// Configure TLS
 	tlsConfig := &tls.Config{
 		ServerName: host,
-		// InsecureSkipVerify should ONLY be set to true for debugging or specific non-production environments.
-		// It makes the connection vulnerable to man-in-the-middle attacks.
 		InsecureSkipVerify: s.config.SkipTLSVerify,
 	}
 	d.TLSConfig = tlsConfig
@@ -95,36 +93,32 @@ func (s *MailService) SendEmailAndLog(to, subject, body string) error {
 	}
 
 	if s.config.UseTLS {
-		// This flag might indicate implicit TLS (SMTPS, usually port 465).
-		// Gomail typically handles implicit TLS if the port is 465 or `d.SSL = true` is set.
-		// For typical 587 + STARTTLS, just the TLSConfig above is sufficient.
+		// ... (comments remain same)
 	}
 
 	if s.config.UseSTARTTLS {
-		// gomail enables STARTTLS by default if the server supports it on typical ports (e.g., 587)
-		// No specific configuration needed here unless you want to *force* it off or specify a policy.
+		// ... (comments remain same)
 	}
 
 	// Send the email
 	if err = d.DialAndSend(m); err != nil {
-		status = "Failed" // Update status for defer function
+		status = "Failed"
 		return fmt.Errorf("could not send email: %w", err)
 	}
 
-	status = "Success" // Update status for defer function
+	status = "Success"
 	return nil
 }
 
-// This function is illustrative if you needed a simple non-authenticated connection
-// It's not used by the main SendEmailAndLog logic.
+// sendEmailNoAuth function remains same
 func sendEmailNoAuth(host, port, from, to, subject, body string) error {
 	msg := []byte("To: " + to + "\r\n" +
-		"From: " + from + "\r\r\n" +
+		"From: " + from + "\r\n" +
 		"Subject: " + subject + "\r\n" +
 		"\r\n" +
 		body + "\r\n")
 
-	auth := smtp.PlainAuth("", "", "", host) // No authentication
+	auth := smtp.PlainAuth("", "", "", host)
 	err := smtp.SendMail(fmt.Sprintf("%s:%s", host, port), auth, from, []string{to}, msg)
 	if err != nil {
 		return fmt.Errorf("error sending mail (no auth): %w", err)
