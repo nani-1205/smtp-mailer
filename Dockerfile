@@ -3,8 +3,11 @@ FROM golang:1.20-alpine AS builder
 
 WORKDIR /app
 
-# Install git, which is required by `go mod tidy` for some modules (e.g., those from gopkg.in or direct Git repos)
+# Install git, which is required by `go mod tidy` for some modules
 RUN apk add --no-cache git
+
+# Set GOPROXY to direct to avoid issues with Go module proxy cache/resolution for problematic modules
+ENV GOPROXY=direct
 
 # Copy all application source code, including go.mod.
 # This ensures `go mod tidy` sees all import statements.
@@ -21,7 +24,7 @@ ENV GOOS=linux
 RUN go build -o /app/smtp-mailer ./main.go
 
 # Stage 2: Create the final lean image
-FROM alpine:3.19
+FROM alpine:latest
 
 WORKDIR /app
 

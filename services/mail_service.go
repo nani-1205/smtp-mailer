@@ -119,7 +119,7 @@ func (s *MailService) SendEmailAndLog(to, subject, body string) error {
 // It's not used by the main SendEmailAndLog logic.
 func sendEmailNoAuth(host, port, from, to, subject, body string) error {
 	msg := []byte("To: " + to + "\r\n" +
-		"From: " + from + "\r\n" +
+		"From: " + from + "\r\r\n" +
 		"Subject: " + subject + "\r\n" +
 		"\r\n" +
 		body + "\r\n")
