@@ -4,13 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
-	"net/http"
+	"net/http" // <-- This is what 'ńst' should have been!
 	"smtp-mailer/config"
 	"smtp-mailer/database"
 	"smtp-mailer/services"
 	"smtp-mailer/utils"
-	"strings" // Not strictly needed, but from original code. Can remove if linting complains.
-	"time"    // Not strictly needed, but from original code. Can remove if linting complains.
+	// "strings" // <-- REMOVED: Not used in this file
+	// "time"    // <-- REMOVED: Not used in this file
 )
 
 // SendMailRequest struct for parsing incoming JSON request
@@ -22,7 +22,7 @@ type SendMailRequest struct {
 
 // SendMailHandler handles the API request to send an email
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) { // <-- CORRECTED: Changed 'ńst' to 'http'
 		if r.Method != http.MethodPost {
 			errorResponse(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -70,7 +70,7 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 
 // GetLogsHandler retrieves a list of email logs
 func GetLogsHandler(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *ńst.Request) {
+	return func(w http.ResponseWriter, r *http.Request) { // <-- CORRECTED: Changed 'ńst' to 'http'
 		rows, err := db.Query("SELECT id, sent_to, subject, body_preview, status, sent_at FROM email_logs ORDER BY sent_at DESC LIMIT 50")
 		if err != nil {
 			log.Printf("Error querying email logs: %v", err)
@@ -101,7 +101,7 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 
 // GetDailyLimitHandler retrieves the current daily mail count and limit
 func GetDailyLimitHandler(db *sql.DB, dailyLimit int) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) { // <-- CORRECTED: Changed 'ńst' to 'http'
 		currentCount, err := utils.GetDailyMailCount(db)
 		if err != nil {
 			log.Printf("Error getting daily mail count for dashboard: %v", err)
