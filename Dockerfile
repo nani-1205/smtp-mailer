@@ -3,22 +3,22 @@ FROM golang:1.20-alpine AS builder
 
 WORKDIR /app
 
-# Install git, which is required by `go mod tidy` for some modules
-RUN apk add --no-cache git
+# Install git and tzdata for timezone support
+RUN apk add --no-cache git tzdata
 
-# Set GOPROXY to direct to avoid issues with Go module proxy cache/resolution for problematic modules
+# Set the timezone for the builder stage (for consistent timestamps during build if needed)
+ENV TZ Asia/Kolkata
+
+# Set GOPROXY to direct to avoid issues with Go module proxy cache/resolution
 ENV GOPROXY=direct
 
 # Copy all application source code, including go.mod.
-# This ensures `go mod tidy` sees all import statements.
 COPY . .
 
 # Run go mod tidy to download dependencies and generate/update go.sum inside the container.
-# This command needs to see all .go files to correctly determine dependencies.
 RUN go mod tidy
 
 # Build the Go application
-# CGO_ENABLED=0 is important for static binaries in Alpine
 ENV CGO_ENABLED=0
 ENV GOOS=linux
 RUN go build -o /app/smtp-mailer ./main.go
@@ -28,8 +28,11 @@ FROM alpine:latest
 
 WORKDIR /app
 
-# Install ca-certificates for HTTPS/TLS connections (needed for TLS connections to SMTP servers)
-RUN apk add --no-cache ca-certificates
+# Install ca-certificates and tzdata for runtime timezone support
+RUN apk add --no-cache ca-certificates tzdata
+
+# Set the timezone for the runtime container
+ENV TZ Asia/Kolkata
 
 # Copy the built Go binary from the builder stage
 COPY --from=builder /app/smtp-mailer .
