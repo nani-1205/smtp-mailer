@@ -5,70 +5,119 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SMTP Mailer Dashboard</title>
     <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>SMTP Mailer Dashboard</h1>
-        </header>
-
-        <section class="card send-mail-section">
-            <h2>Send New Email</h2>
-            <form id="sendMailForm">
-                <div class="form-group">
-                    <label for="to">To:</label>
-                    <input type="email" id="to" placeholder="recipient@example.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="subject">Subject:</label>
-                    <input type="text" id="subject" placeholder="Your email subject" required>
-                </div>
-                <div class="form-group">
-                    <label for="body">Body:</label>
-                    <textarea id="body" placeholder="Your email body content..." rows="8" required></textarea>
-                </div>
-                <button type="submit">Send Email</button>
-            </form>
-            <div id="mailMessage" class="message-area"></div>
-        </section>
-
-        <section class="card daily-limit-section">
-            <h2>Daily Mail Limit</h2>
-            <div class="limit-stats">
-                <p>Sent Today: <span id="sentCount">0</span></p>
-                <p>Limit: <span id="limitCount">0</span></p>
-                <p>Remaining: <span id="remainingCount">0</span></p>
-            </div>
-            <div class="progress-bar-container">
-                <div class="progress-bar" id="mailProgressBar" style="width: 0%;"></div>
-            </div>
-        </section>
-
-        <section class="card email-logs-section">
-            <h2>Email Logs (Last 50)</h2>
-            <div class="table-container">
-                <table id="emailLogsTable">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>To</th>
-                            <th>Subject</th>
-                            <th>Body Preview</th>
-                            <th>Status</th>
-                            <th>Sent At</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Logs will be loaded here by JavaScript -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
+    <div class="sidebar">
+        <div class="logo">SMTP Mailer</div>
+        <nav>
+            <ul>
+                <li><a href="#overview" class="active">📊 Overview</a></li>
+                <li><a href="#send-email">✉️ Send Email</a></li>
+                <li><a href="#email-logs">📜 Email Logs</a></li>
+                <li><a href="#daily-limit">📈 Daily Limit</a></li>
+            </ul>
+        </nav>
+        <div class="sidebar-footer">
+            <p>&copy; 2023 Mailer</p>
+        </div>
     </div>
 
-    <footer>
-        <p>&copy; 2023 SMTP Mailer App. All rights reserved.</p>
-    </footer>
+    <div class="main-content">
+        <header>
+            <h1>Dashboard</h1>
+        </header>
+
+        <section id="overview" class="dashboard-section active">
+            <div class="dashboard-grid">
+                <div class="card card-summary total-sent">
+                    <h3>Total Sent Today</h3>
+                    <p id="overviewSentCount" class="summary-value">0</p>
+                </div>
+                <div class="card card-summary remaining">
+                    <h3>Remaining Today</h3>
+                    <p id="overviewRemainingCount" class="summary-value">0</p>
+                </div>
+                <div class="card chart-card-lg">
+                    <h2>Daily Mail Usage</h2>
+                    <canvas id="dailyUsageChart"></canvas>
+                </div>
+                <div class="card chart-card-sm">
+                    <h2>Email Status</h2>
+                    <canvas id="statusDistributionChart"></canvas>
+                </div>
+                <div class="card chart-card-lg full-width">
+                    <h2>Emails Sent Last 7 Days</h2>
+                    <canvas id="dailySendsChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="send-email" class="dashboard-section">
+            <div class="card send-mail-section">
+                <h2>Send New Email</h2>
+                <form id="sendMailForm">
+                    <div class="form-group">
+                        <label for="to">To:</label>
+                        <input type="email" id="to" placeholder="recipient@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="subject">Subject:</label>
+                        <input type="text" id="subject" placeholder="Your email subject" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="body">Body:</label>
+                        <textarea id="body" placeholder="Your email body content..." rows="8" required></textarea>
+                    </div>
+                    <button type="submit">Send Email</button>
+                </form>
+                <div id="mailMessage" class="message-area"></div>
+            </div>
+        </section>
+
+        <section id="email-logs" class="dashboard-section">
+            <div class="card email-logs-section">
+                <h2>Email Logs</h2>
+                <div class="logs-controls">
+                    <label for="logDate">Select Date:</label>
+                    <input type="date" id="logDate">
+                    <button id="resetLogDate">Today's Newest 5</button>
+                </div>
+                <div class="table-container">
+                    <table id="emailLogsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>To</th>
+                                <th>Subject</th>
+                                <th>Body Preview</th>
+                                <th>Status</th>
+                                <th>Sent At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Logs will be loaded here by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="daily-limit" class="dashboard-section">
+            <div class="card daily-limit-section">
+                <h2>Daily Mail Limit</h2>
+                <div class="limit-stats">
+                    <p>Sent Today: <span id="sentCount">0</span></p>
+                    <p>Limit: <span id="limitCount">0</span></p>
+                    <p>Remaining: <span id="remainingCount">0</span></p>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="mailProgressBar" style="width: 0%;"></div>
+                </div>
+            </div>
+        </section>
+
+    </div>
 
     <script src="/js/script.js"></script>
 </body>

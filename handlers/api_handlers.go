@@ -4,13 +4,16 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
-	"net/http" // <-- This is what 'ńst' should have been!
+	"net/http"
+	"strconv"
+	"time" // Used for parsing date in logs handler
+
 	"smtp-mailer/config"
 	"smtp-mailer/database"
 	"smtp-mailer/services"
 	"smtp-mailer/utils"
-	// "strings" // <-- REMOVED: Not used in this file
-	// "time"    // <-- REMOVED: Not used in this file
+
+	"github.com/gorilla/mux" // Needed for mux.Vars in GetLogsHandler
 )
 
 // SendMailRequest struct for parsing incoming JSON request
@@ -22,7 +25,7 @@ type SendMailRequest struct {
 
 // SendMailHandler handles the API request to send an email
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) { // <-- CORRECTED: Changed 'ńst' to 'http'
+	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			errorResponse(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -56,7 +59,6 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		emailService := services.NewMailService(cfg, db)
 		err = emailService.SendEmailAndLog(req.To, req.Subject, req.Body)
 
-		// Status is handled within SendEmailAndLog's defer, so we just check err here
 		if err != nil {
 			log.Printf("Error sending email to %s: %v", req.To, err)
 			errorResponse(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
@@ -68,10 +70,68 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	}
 }
 
-// GetLogsHandler retrieves a list of email logs
+// GetLogsHandler retrieves a list of email logs, with optional date and limit filtering.
+// Query parameters:
+// - date: YYYY-MM-DD (e.g., ?date=2025-08-14). If omitted, defaults to current IST date.
+// - limit: int (e.g., ?limit=5). If omitted, defaults to 50, or a specified value if date is provided.
 func GetLogsHandler(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) { // <-- CORRECTED: Changed 'ńst' to 'http'
-		rows, err := db.Query("SELECT id, sent_to, subject, body_preview, status, sent_at FROM email_logs ORDER BY sent_at DESC LIMIT 50")
+	return func(w http.ResponseWriter, r *http.Request) {
+		queryDateStr := r.URL.Query().Get("date")
+		limitStr := r.URL.Query().Get("limit")
+
+		var query string
+		var args []interface{}
+
+		baseQuery := "SELECT id, sent_to, subject, body_preview, status, sent_at FROM email_logs"
+		orderBy := "ORDER BY sent_at DESC"
+		defaultLimit := 50 // Default for historical logs
+
+		if queryDateStr != "" {
+			// Specific date requested
+			// Ensure date is in YYYY-MM-DD format for parsing
+			_, err := time.Parse("2006-01-02", queryDateStr)
+			if err != nil {
+				errorResponse(w, "Invalid date format. Use YYYY-MM-DD.", http.StatusBadRequest)
+				return
+			}
+			query = baseQuery + " WHERE (sent_at AT TIME ZONE 'Asia/Kolkata')::date = $1::date " + orderBy
+			args = append(args, queryDateStr)
+
+			// If a specific date is requested, and a limit is specified, use that limit.
+			// Otherwise, use the default for historical logs.
+			if limitStr != "" {
+				parsedLimit, err := strconv.Atoi(limitStr)
+				if err == nil && parsedLimit > 0 {
+					query += " LIMIT $" + strconv.Itoa(len(args)+1)
+					args = append(args, parsedLimit)
+				} else {
+					query += " LIMIT $" + strconv.Itoa(len(args)+1)
+					args = append(args, defaultLimit)
+				}
+			} else {
+				query += " LIMIT $" + strconv.Itoa(len(args)+1)
+				args = append(args, defaultLimit)
+			}
+
+		} else {
+			// No specific date, default to current IST date and specific limit (e.g., top 5)
+			todayIST := time.Now().In(time.FixedZone("IST", 5*3600+30*60)).Format("2006-01-02") // IST today
+			query = baseQuery + " WHERE (sent_at AT TIME ZONE 'Asia/Kolkata')::date = $1::date " + orderBy
+			args = append(args, todayIST)
+
+			// Default limit for current day is 5, can be overridden by query param
+			currentDayLimit := 5
+			if limitStr != "" {
+				parsedLimit, err := strconv.Atoi(limitStr)
+				if err == nil && parsedLimit > 0 {
+					currentDayLimit = parsedLimit
+				}
+			}
+			query += " LIMIT $" + strconv.Itoa(len(args)+1)
+			args = append(args, currentDayLimit)
+		}
+
+		rows, err := db.Query(query, args...)
 		if err != nil {
 			log.Printf("Error querying email logs: %v", err)
 			errorResponse(w, "Internal server error fetching logs", http.StatusInternalServerError)
@@ -101,7 +161,7 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 
 // GetDailyLimitHandler retrieves the current daily mail count and limit
 func GetDailyLimitHandler(db *sql.DB, dailyLimit int) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) { // <-- CORRECTED: Changed 'ńst' to 'http'
+	return func(w http.ResponseWriter, r *http.Request) {
 		currentCount, err := utils.GetDailyMailCount(db)
 		if err != nil {
 			log.Printf("Error getting daily mail count for dashboard: %v", err)
@@ -115,5 +175,43 @@ func GetDailyLimitHandler(db *sql.DB, dailyLimit int) http.HandlerFunc {
 			"remaining":     dailyLimit - currentCount,
 		}
 		successResponse(w, "Daily mail limit status retrieved", data)
+	}
+}
+
+// GetEmailStatsHandler retrieves the distribution of email statuses (success/failed) for the current IST day.
+func GetEmailStatsHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		statusCounts, err := utils.GetEmailStatusDistribution(db)
+		if err != nil {
+			log.Printf("Error getting email status distribution: %v", err)
+			errorResponse(w, "Internal server error fetching email stats", http.StatusInternalServerError)
+			return
+		}
+		successResponse(w, "Email status distribution retrieved", statusCounts)
+	}
+}
+
+// GetDailySendsHandler retrieves the number of emails sent per day for the last X days.
+// Query parameter:
+// - days: int (e.g., ?days=7). If omitted, defaults to 7.
+func GetDailySendsHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		daysStr := r.URL.Query().Get("days")
+		days := 7 // Default to last 7 days
+
+		if daysStr != "" {
+			parsedDays, err := strconv.Atoi(daysStr)
+			if err == nil && parsedDays > 0 {
+				days = parsedDays
+			}
+		}
+
+		dailySends, err := utils.GetDailySendsOverPeriod(db, days)
+		if err != nil {
+			log.Printf("Error getting daily sends over period: %v", err)
+			errorResponse(w, "Internal server error fetching daily sends", http.StatusInternalServerError)
+			return
+		}
+		successResponse(w, "Daily sends over period retrieved", dailySends)
 	}
 }

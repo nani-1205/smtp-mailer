@@ -1,16 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --primary-color: #4CAF50; /* Green */
-    --secondary-color: #2196F3; /* Blue */
-    --background-color: #f4f7f6;
+    --primary-color: #6a67ff; /* A vibrant purple */
+    --secondary-color: #4CAF50; /* Green for success */
+    --error-color: #f44336; /* Red for errors */
+    --warning-color: #ff9800; /* Orange for warnings */
+    --background-color: #f7f9fc; /* Light blue-gray background */
     --card-background: #ffffff;
     --text-color: #333;
     --light-text-color: #666;
     --border-color: #e0e0e0;
-    --success-color: #4CAF50;
-    --error-color: #f44336;
-    --info-color: #2196F3;
+    --sidebar-bg: #ffffff;
+    --sidebar-item-hover: #f0f4f8;
+    --box-shadow-light: 0 4px 12px rgba(0, 0, 0, 0.05);
+    --box-shadow-medium: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 body {
@@ -20,81 +23,182 @@ body {
     background-color: var(--background-color);
     color: var(--text-color);
     line-height: 1.6;
+    display: flex;
+    min-height: 100vh;
+    overflow-x: hidden;
 }
 
-.container {
-    max-width: 1200px;
-    margin: 20px auto;
-    padding: 0 20px;
-    display: grid;
-    gap: 20px;
-    grid-template-columns: 1fr;
-    grid-template-areas:
-        "header"
-        "send-mail"
-        "daily-limit"
-        "logs"
-        "footer";
+/* Sidebar Styling */
+.sidebar {
+    width: 250px;
+    background-color: var(--sidebar-bg);
+    padding: 30px 20px;
+    box-shadow: var(--box-shadow-medium);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 1000;
 }
 
-@media (min-width: 768px) {
-    .container {
-        grid-template-columns: 2fr 1fr;
-        grid-template-areas:
-            "header header"
-            "send-mail daily-limit"
-            "logs logs"
-            "footer footer";
-    }
+.logo {
+    font-size: 1.8em;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.sidebar nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar nav ul li {
+    margin-bottom: 10px;
+}
+
+.sidebar nav ul li a {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    color: var(--light-text-color);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    font-weight: 500;
+}
+
+.sidebar nav ul li a:hover,
+.sidebar nav ul li a.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.sidebar nav ul li a span {
+    margin-right: 10px;
+}
+
+.sidebar-footer {
+    text-align: center;
+    color: var(--light-text-color);
+    font-size: 0.8em;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+
+/* Main Content Area */
+.main-content {
+    flex-grow: 1;
+    padding: 30px;
+    padding-left: 50px; /* Adjust spacing from sidebar */
+    box-sizing: border-box;
 }
 
 header {
-    grid-area: header;
-    background-color: var(--primary-color);
-    color: white;
-    padding: 30px 20px;
-    border-radius: 8px;
-    text-align: center;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    margin-bottom: 0; /* Adjusted to remove extra space */
+    background-color: transparent;
+    color: var(--text-color);
+    padding: 0 0 30px 0;
+    text-align: left;
 }
 
 header h1 {
     margin: 0;
-    font-size: 2.5em;
+    font-size: 2.8em;
     font-weight: 700;
+    color: var(--primary-color);
 }
 
+/* Dashboard Sections */
+.dashboard-section {
+    display: none; /* Hidden by default, shown by JS */
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.dashboard-section.active {
+    display: block;
+    opacity: 1;
+}
+
+/* Cards */
 .card {
     background-color: var(--card-background);
     padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    box-shadow: var(--box-shadow-light);
+    margin-bottom: 20px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.send-mail-section {
-    grid-area: send-mail;
-}
-
-.daily-limit-section {
-    grid-area: daily-limit;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.email-logs-section {
-    grid-area: logs;
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--box-shadow-medium);
 }
 
 h2 {
     color: var(--primary-color);
     margin-top: 0;
-    margin-bottom: 25px;
-    font-size: 1.8em;
+    margin-bottom: 20px;
+    font-size: 1.6em;
     font-weight: 600;
-    border-bottom: 2px solid var(--border-color);
-    padding-bottom: 15px;
+}
+
+h3 {
+    color: var(--light-text-color);
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    font-weight: 500;
+}
+
+
+/* Dashboard Grid Layout */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.card-summary {
+    text-align: center;
+    padding: 25px;
+}
+
+.card-summary .summary-value {
+    font-size: 3em;
+    font-weight: 700;
+    margin-top: 10px;
+    color: var(--primary-color);
+}
+
+.total-sent .summary-value { color: var(--secondary-color); }
+.remaining .summary-value { color: var(--primary-color); }
+
+.chart-card-lg {
+    grid-column: span 2; /* Takes 2 columns on larger screens */
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.chart-card-sm {
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.full-width {
+    grid-column: 1 / -1; /* Spans all columns */
+}
+
+/* Send Mail Section */
+.send-mail-section {
+    max-width: 600px;
+    margin: 0 auto;
 }
 
 .form-group {
@@ -110,53 +214,58 @@ h2 {
 
 .form-group input[type="email"],
 .form-group input[type="text"],
-.form-group textarea {
+.form-group textarea,
+.form-group input[type="date"] {
     width: calc(100% - 20px);
     padding: 12px 10px;
     border: 1px solid var(--border-color);
-    border-radius: 5px;
+    border-radius: 8px;
     font-size: 1em;
     color: var(--text-color);
-    transition: border-color 0.3s ease;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    background-color: var(--background-color); /* Light background for input */
 }
 
 .form-group input:focus,
-.form-group textarea:focus {
-    border-color: var(--secondary-color);
+.form-group textarea:focus,
+.form-group input[type="date"]:focus {
+    border-color: var(--primary-color);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+    box-shadow: 0 0 0 3px rgba(106, 103, 255, 0.2);
+    background-color: white;
 }
 
-button[type="submit"] {
+button {
     background-color: var(--primary-color);
     color: white;
     padding: 12px 25px;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     font-size: 1.1em;
     cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
     width: 100%;
     font-weight: 500;
 }
 
-button[type="submit"]:hover {
-    background-color: #43a047;
+button:hover {
+    background-color: #5b58e6;
     transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 .message-area {
     margin-top: 20px;
     padding: 15px;
-    border-radius: 5px;
+    border-radius: 8px;
     font-weight: 500;
     text-align: center;
 }
 
 .message-area.success {
     background-color: #e8f5e9;
-    color: var(--success-color);
-    border: 1px solid var(--success-color);
+    color: var(--secondary-color);
+    border: 1px solid var(--secondary-color);
 }
 
 .message-area.error {
@@ -165,6 +274,7 @@ button[type="submit"]:hover {
     border: 1px solid var(--error-color);
 }
 
+/* Daily Limit Section (old design for now, can be removed if chart is primary) */
 .limit-stats p {
     font-size: 1.1em;
     margin: 10px 0;
@@ -187,15 +297,34 @@ button[type="submit"]:hover {
 
 .progress-bar {
     height: 100%;
-    background-color: var(--secondary-color);
+    background-color: var(--primary-color);
     transition: width 0.5s ease-in-out;
     border-radius: 5px;
+}
+
+/* Email Logs Section */
+.logs-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: center;
+}
+
+.logs-controls label {
+    font-weight: 500;
+    color: var(--light-text-color);
+}
+
+.logs-controls button {
+    width: auto;
+    padding: 10px 20px;
+    background-color: var(--primary-color);
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
+    margin-top: 0; /* Remove top margin from table */
 }
 
 table th,
@@ -207,11 +336,14 @@ table td {
 }
 
 table th {
-    background-color: #f8f8f8;
+    background-color: #f0f0f5; /* Lighter header background */
     color: var(--text-color);
     font-weight: 600;
     text-transform: uppercase;
     font-size: 0.85em;
+    position: sticky; /* Keep header visible on scroll */
+    top: 0;
+    z-index: 1;
 }
 
 table tbody tr:nth-child(even) {
@@ -219,18 +351,73 @@ table tbody tr:nth-child(even) {
 }
 
 table tbody tr:hover {
-    background-color: #f0f0f0;
+    background-color: #eef2f7; /* Lighter hover */
 }
 
 .table-container {
-    overflow-x: auto; /* Enables horizontal scrolling on small screens */
+    overflow-x: auto;
+    max-height: 400px; /* Limit height for scrollable table */
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
 }
 
-footer {
-    grid-area: footer;
-    text-align: center;
-    margin-top: 30px;
-    padding: 20px;
-    color: var(--light-text-color);
-    font-size: 0.9em;
+/* Status specific styling in logs table */
+td.success {
+    color: var(--secondary-color);
+    font-weight: 600;
+}
+td.failed {
+    color: var(--error-color);
+    font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        padding: 20px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .sidebar .logo {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .sidebar nav ul {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .sidebar nav ul li {
+        margin: 5px 10px;
+    }
+    .sidebar nav ul li a {
+        padding: 8px 12px;
+        font-size: 0.9em;
+    }
+    .sidebar-footer {
+        display: none; /* Hide on smaller screens */
+    }
+    .main-content {
+        padding: 20px;
+        padding-left: 20px; /* Reset padding */
+    }
+    .dashboard-grid {
+        grid-template-columns: 1fr; /* Stack columns */
+    }
+    .chart-card-lg, .chart-card-sm, .full-width {
+        grid-column: span 1; /* Reset span */
+    }
+    .logs-controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .logs-controls button, .logs-controls input {
+        width: 100%;
+        margin-top: 10px;
+    }
 }

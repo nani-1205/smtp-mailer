@@ -41,8 +41,11 @@ func main() {
 	r.HandleFunc("/api/logs", handlers.GetLogsHandler(db)).Methods("GET")
 	r.HandleFunc("/api/limit", handlers.GetDailyLimitHandler(db, cfg.DailyMailLimit)).Methods("GET")
 
+	// New API routes for dashboard stats
+	r.HandleFunc("/api/stats/status-distribution", handlers.GetEmailStatsHandler(db)).Methods("GET")
+	r.HandleFunc("/api/stats/daily-sends", handlers.GetDailySendsHandler(db)).Methods("GET")
+
 	// Dashboard Static Files
-	// Serve the web/ directory as static files
 	staticDir := "./web"
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(staticDir)))
 
