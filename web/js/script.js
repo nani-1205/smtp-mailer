@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const sendMailForm = document.getElementById('sendMailForm');
-    const mailMessage = document.getElementById('mailMessage');
+    const mailMessage = document.getElementById('mailMessage'); // This element initially has display: none;
 
     // Overview Section
     const overviewSentCount = document.getElementById('overviewSentCount');
     const overviewRemainingCount = document.getElementById('overviewRemainingCount');
 
-    // Daily Limit Section (redundant but keeping for now as per HTML)
+    // Daily Limit Section (from #daily-limit section, still updated for consistency)
     const sentCountSpan = document.getElementById('sentCount');
     const limitCountSpan = document.getElementById('limitCount');
     const remainingCountSpan = document.getElementById('remainingCount');
@@ -25,9 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayMessage(message, type) {
         mailMessage.textContent = message;
         mailMessage.className = `message-area ${type}`;
+        mailMessage.style.display = 'block'; // Ensure it's visible when a message is displayed
         setTimeout(() => {
             mailMessage.textContent = '';
             mailMessage.className = 'message-area';
+            mailMessage.style.display = 'none'; // Hide it after message clears
         }, 5000); // Clear message after 5 seconds
     }
 
@@ -54,29 +56,34 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.status === 'success') {
                 const { current_count, limit, remaining } = data.data;
 
-                // Update Overview Section
+                // Update Overview Section summary cards
                 overviewSentCount.textContent = current_count;
                 overviewRemainingCount.textContent = remaining;
 
-                // Update Daily Limit Section
+                // Update Daily Limit Section (if user navigates there)
                 sentCountSpan.textContent = current_count;
                 limitCountSpan.textContent = limit;
                 remainingCountSpan.textContent = remaining;
 
                 const percentage = (current_count / limit) * 100;
                 mailProgressBar.style.width = `${Math.min(percentage, 100)}%`;
-                mailProgressBar.style.backgroundColor = percentage >= 90 ? 'var(--error-color)' : 'var(--primary-color)';
+                // Use a warning color if close to limit, error if exceeded
+                if (percentage >= 100) {
+                    mailProgressBar.style.backgroundColor = 'var(--error-color)';
+                } else if (percentage >= 90) {
+                    mailProgressBar.style.backgroundColor = 'var(--warning-color)';
+                } else {
+                    mailProgressBar.style.backgroundColor = 'var(--primary-color)';
+                }
 
                 // Update Daily Usage Chart
                 updateDailyUsageChart(current_count, limit);
 
             } else {
                 console.error('Failed to fetch daily limit:', data.message);
-                // displayMessage('Failed to load daily limit data.', 'error'); // Don't spam messages
             }
         } catch (error) {
             console.error('Error fetching daily limit:', error);
-            // displayMessage('Error connecting to server for limit data.', 'error');
         }
     }
 
@@ -118,17 +125,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const statusCell = row.insertCell();
                     statusCell.textContent = log.status;
-                    statusCell.classList.add(log.status.toLowerCase());
+                    // Apply new status classes for styling
+                    statusCell.classList.add(`status-${log.status.toLowerCase()}`);
 
                     row.insertCell().textContent = formatDate(log.sent_at);
                 });
             } else {
                 console.error('Failed to fetch email logs:', data.message);
-                // displayMessage('Failed to load email logs.', 'error');
             }
         } catch (error) {
             console.error('Error fetching email logs:', error);
-            // displayMessage('Error connecting to server for log data.', 'error');
         }
     }
 
@@ -141,8 +147,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const successCount = data.data.Success || 0;
                 const failedCount = data.data.Failed || 0;
 
+                // Ensure initial data for chart, even if counts are zero
+                const chartData = [successCount, failedCount];
+                const total = successCount + failedCount;
+
                 if (statusDistributionChart) {
-                    statusDistributionChart.data.datasets[0].data = [successCount, failedCount];
+                    statusDistributionChart.data.datasets[0].data = chartData;
                     statusDistributionChart.update();
                 } else {
                     const ctx = document.getElementById('statusDistributionChart').getContext('2d');
@@ -151,27 +161,31 @@ document.addEventListener('DOMContentLoaded', () => {
                         data: {
                             labels: ['Success', 'Failed'],
                             datasets: [{
-                                data: [successCount, failedCount],
+                                data: chartData,
                                 backgroundColor: [
-                                    'rgba(76, 175, 80, 0.8)', // Green
-                                    'rgba(244, 67, 54, 0.8)'  // Red
+                                    'rgba(34, 197, 94, 0.8)', // Corresponds to --secondary-color for success
+                                    'rgba(239, 68, 68, 0.8)'  // Corresponds to --error-color for failed
                                 ],
-                                borderColor: [
-                                    'rgba(76, 175, 80, 1)',
-                                    'rgba(244, 67, 54, 1)'
-                                ],
-                                borderWidth: 1
+                                borderWidth: 0 // As per new design
                             }]
                         },
                         options: {
                             responsive: true,
+                            maintainAspectRatio: false, // Important for consistent sizing
                             plugins: {
                                 legend: {
                                     position: 'bottom',
+                                    labels: {
+                                        padding: 20,
+                                        font: {
+                                            family: 'Inter',
+                                            size: 12,
+                                            weight: '500'
+                                        }
+                                    }
                                 },
                                 title: {
-                                    display: false,
-                                    text: 'Email Status Distribution'
+                                    display: false, // Title is handled by HTML chart-title div
                                 }
                             }
                         }
@@ -205,27 +219,45 @@ document.addEventListener('DOMContentLoaded', () => {
                             datasets: [{
                                 label: 'Emails Sent',
                                 data: counts,
-                                backgroundColor: 'rgba(106, 103, 255, 0.7)', // Primary purple
-                                borderColor: 'rgba(106, 103, 255, 1)',
-                                borderWidth: 1
+                                backgroundColor: 'rgba(99, 102, 241, 0.8)', // Corresponds to --primary-color
+                                borderRadius: 8, // As per new design
+                                borderSkipped: false, // As per new design
                             }]
                         },
                         options: {
                             responsive: true,
+                            maintainAspectRatio: false, // Important for consistent sizing
                             plugins: {
                                 legend: {
-                                    display: false,
+                                    display: false, // As per new design
                                 },
                                 title: {
-                                    display: false,
-                                    text: 'Emails Sent Last 7 Days'
+                                    display: false, // Title is handled by HTML chart-title div
                                 }
                             },
                             scales: {
                                 y: {
                                     beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(226, 232, 240, 0.5)' // As per new design
+                                    },
                                     ticks: {
-                                        precision: 0 // Ensure integer ticks for count
+                                        precision: 0, // Ensure integer ticks for count
+                                        font: {
+                                            family: 'Inter', // As per new design
+                                            size: 11
+                                        }
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        display: false // As per new design
+                                    },
+                                    ticks: {
+                                        font: {
+                                            family: 'Inter', // As per new design
+                                            size: 11
+                                        }
                                     }
                                 }
                             }
@@ -239,8 +271,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateDailyUsageChart(currentCount, limit) {
+        // Ensure data is present for chart, even if counts are zero
+        const chartData = [currentCount, Math.max(0, limit - currentCount)]; // Ensure remaining is not negative
+
         if (dailyUsageChart) {
-            dailyUsageChart.data.datasets[0].data = [currentCount, limit - currentCount];
+            dailyUsageChart.data.datasets[0].data = chartData;
             dailyUsageChart.update();
         } else {
             const ctx = document.getElementById('dailyUsageChart').getContext('2d');
@@ -249,28 +284,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 data: {
                     labels: ['Sent', 'Remaining'],
                     datasets: [{
-                        data: [currentCount, limit - currentCount],
+                        data: chartData,
                         backgroundColor: [
-                            'rgba(106, 103, 255, 0.8)', // Primary purple
-                            'rgba(200, 200, 200, 0.6)' // Light gray for remaining
+                            'rgba(99, 102, 241, 0.8)', // Corresponds to --primary-color
+                            'rgba(226, 232, 240, 0.8)' // Light gray for remaining, as per new design
                         ],
-                        borderColor: [
-                            'rgba(106, 103, 255, 1)',
-                            'rgba(200, 200, 200, 1)'
-                        ],
-                        borderWidth: 1
+                        borderWidth: 0, // As per new design
+                        cutout: '70%' // As per new design
                     }]
                 },
                 options: {
                     responsive: true,
-                    cutout: '70%', // Make it a doughnut
+                    maintainAspectRatio: false, // Important for consistent sizing
                     plugins: {
                         legend: {
                             position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                font: {
+                                    family: 'Inter', // As per new design
+                                    size: 12,
+                                    weight: '500'
+                                }
+                            }
                         },
                         title: {
-                            display: false,
-                            text: 'Daily Usage'
+                            display: false, // Title is handled by HTML chart-title div
                         }
                     }
                 }
@@ -281,10 +320,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
 
     // Sidebar navigation
-    document.querySelectorAll('.sidebar nav ul li a').forEach(link => {
+    document.querySelectorAll('.nav-link').forEach(link => { // Select by new class nav-link
         link.addEventListener('click', function(e) {
             e.preventDefault();
-            document.querySelectorAll('.sidebar nav ul li a').forEach(nav => nav.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(nav => nav.classList.remove('active'));
             this.classList.add('active');
 
             const targetId = this.getAttribute('href').substring(1);
@@ -317,8 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.status === 'success') {
                 displayMessage(data.message, 'success');
                 sendMailForm.reset(); // Clear form
-                // Refresh all dashboard data
-                updateAllDashboardData();
+                updateAllDashboardData(); // Refresh all dashboard data
             } else {
                 displayMessage(data.message, 'error');
             }
