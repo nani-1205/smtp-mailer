@@ -91,15 +91,15 @@ body {
 /* Main Content Area */
 .main-content {
     flex-grow: 1;
-    padding: 30px;
-    padding-left: 50px; /* Adjust spacing from sidebar */
+    padding: 25px; /* Slightly reduced padding */
+    padding-left: 40px; /* Adjust spacing from sidebar */
     box-sizing: border-box;
 }
 
 header {
     background-color: transparent;
     color: var(--text-color);
-    padding: 0 0 30px 0;
+    padding: 0 0 25px 0; /* Reduced bottom padding */
     text-align: left;
 }
 
@@ -125,10 +125,10 @@ header h1 {
 /* Cards */
 .card {
     background-color: var(--card-background);
-    padding: 30px;
+    padding: 25px; /* Slightly reduced padding */
     border-radius: 12px;
     box-shadow: var(--box-shadow-light);
-    margin-bottom: 20px;
+    margin-bottom: 20px; /* Consistent margin between cards */
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -140,7 +140,7 @@ header h1 {
 h2 {
     color: var(--primary-color);
     margin-top: 0;
-    margin-bottom: 20px;
+    margin-bottom: 15px; /* Reduced margin */
     font-size: 1.6em;
     font-weight: 600;
 }
@@ -148,7 +148,7 @@ h2 {
 h3 {
     color: var(--light-text-color);
     margin-top: 0;
-    margin-bottom: 15px;
+    margin-bottom: 10px; /* Reduced margin */
     font-size: 1.2em;
     font-weight: 500;
 }
@@ -159,41 +159,61 @@ h3 {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
+    align-items: start; /* Align items to the top to prevent stretching */
 }
 
+/* Make summary cards slightly more compact and align */
 .card-summary {
-    text-align: center;
-    padding: 25px;
+    padding: 20px 25px;
+    height: 150px; /* Fixed height for consistent row alignment */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center; /* Center content */
 }
 
 .card-summary .summary-value {
-    font-size: 3em;
+    font-size: 2.8em;
     font-weight: 700;
-    margin-top: 10px;
-    color: var(--primary-color);
+    margin-top: 5px;
+    margin-bottom: 0;
+    line-height: 1; /* Tighter line height */
 }
 
 .total-sent .summary-value { color: var(--secondary-color); }
 .remaining .summary-value { color: var(--primary-color); }
 
+/* Chart Cards - Give fixed height to prevent excessive stretching when empty */
 .chart-card-lg {
     grid-column: span 2; /* Takes 2 columns on larger screens */
-    min-height: 300px;
+    height: 350px; /* Fixed height for consistent layout */
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    padding-bottom: 20px; /* Ensure space for legend */
 }
 
 .chart-card-sm {
-    min-height: 300px;
+    height: 350px; /* Fixed height */
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    padding-bottom: 20px; /* Ensure space for legend */
 }
 
 .full-width {
     grid-column: 1 / -1; /* Spans all columns */
 }
+
+/* Canvas styling within cards */
+.chart-card-lg canvas,
+.chart-card-sm canvas {
+    flex-grow: 1; /* Make canvas fill available space */
+    max-height: calc(100% - 70px); /* Account for h2 and padding */
+    width: 100% !important; /* Override Chart.js inline styles */
+    height: auto !important; /* Override Chart.js inline styles */
+}
+
 
 /* Send Mail Section */
 .send-mail-section {
@@ -223,7 +243,7 @@ h3 {
     font-size: 1em;
     color: var(--text-color);
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    background-color: var(--background-color); /* Light background for input */
+    background-color: var(--background-color);
 }
 
 .form-group input:focus,
@@ -305,6 +325,7 @@ button:hover {
 /* Email Logs Section */
 .logs-controls {
     display: flex;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
     gap: 15px;
     margin-bottom: 20px;
     align-items: center;
@@ -409,12 +430,19 @@ td.failed {
     .dashboard-grid {
         grid-template-columns: 1fr; /* Stack columns */
     }
-    .chart-card-lg, .chart-card-sm, .full-width {
-        grid-column: span 1; /* Reset span */
+    .chart-card-lg, .chart-card-sm {
+        height: 300px; /* Keep charts a reasonable height on smaller screens */
+    }
+    .card-summary {
+        height: auto; /* Allow auto height on smaller screens */
+        padding: 15px 20px;
+    }
+    .card-summary .summary-value {
+        font-size: 2.2em; /* Smaller font on small screens */
     }
     .logs-controls {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch; /* Stretch controls to full width */
     }
     .logs-controls button, .logs-controls input {
         width: 100%;
