@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
-	"strings" // Added for string manipulation
+	// "strings" // <-- REMOVED: This import is not used in this file
 )
 
 // GetDailyMailCount queries the database for the number of emails sent today.
