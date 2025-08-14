@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Failed to fetch email logs:', data.message);
             }
         } catch (error) {
-            console.error('Error fetching email logs:', error);
+                console.error('Error fetching email logs:', error);
         }
     }
 

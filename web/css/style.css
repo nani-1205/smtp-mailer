@@ -1,59 +1,62 @@
 /* CSS Variables for theming based on the image */
 :root {
-  --color-primary-dark: #1e3a38;
-  --color-primary-light: #4c8a82;
+  --color-primary-dark: #1e3a38; /* Dark green/teal for sidebar */
+  --color-primary-light: #4c8a82; /* Lighter green/teal for sidebar stats */
   --color-secondary: #f0f0f0;
-  --color-accent-orange: #f59e0b;
-  --color-accent-green: #34d399;
-  --color-text: #0f172a; /* Adjusted for better contrast on light mode */
-  --color-text-light: #a3a3a3;
-  --color-text-white: #ffffff;
-  --color-background-dark: #d8e6e5;
-  --color-background-light: #f1f5f9;
-  --color-background-white: #ffffff;
+  --color-accent-orange: #f59e0b; /* Orange accent */
+  --color-accent-green: #34d399; /* Bright green for success */
+  --color-text: #0f172a; /* Dark text on light backgrounds */
+  --color-text-light: #a3a3a3; /* Muted text */
+  --color-text-white: #ffffff; /* White text on dark backgrounds */
+  --color-background-dark: #d8e6e5; /* Main page background light */
+  --color-background-light: #f1f5f9; /* Form input/table header background light */
+  --color-background-white: #ffffff; /* Card background light */
   --color-border: #e2e8f0;
   --color-modal-bg: rgba(0, 0, 0, 0.4);
   --border-radius: 1rem;
   --shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  --ok: var(--color-accent-green);
-  --bad: #ef4444;
-  --warn: var(--color-accent-orange);
+  --ok: var(--color-accent-green); /* Alias for success color */
+  --bad: #ef4444; /* Red for errors */
+  --warn: var(--color-accent-orange); /* Orange for warnings */
+
+  /* For the default (light) theme, these map to the blue tones in the example */
+  --primary: #2563eb; /* Blue primary for general use */
+  --primary-weak: #e7efff; /* Light blue for chart fills */
+  --sidebar-accent: #0b63f6; /* Blue accent for sidebar elements */
 }
 
-/* Dark Theme Adjustments (ensure colors are defined for contrast) */
+/* Dark Theme Adjustments */
 [data-theme="dark"] {
-  --bg: #0b1220;
-  --panel: #0f172a;
-  --text: #e5e7eb;
-  --muted: #a3a3a3;
-  --primary: #3b82f6; /* A contrasting blue for dark mode primary */
-  --primary-weak: #0b1a33;
-  --ok: #10b981;
-  --warn: #f59e0b;
-  --bad: #ef4444;
-  --border: #1f2937;
-  --shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
-  --sidebar: #0a0f1a;
-  --sidebar-accent: #3b82f6;
+  --bg: #0b1220; /* Darker main background */
+  --panel: #0f172a; /* Darker card background */
+  --text: #e5e7eb; /* Light text on dark backgrounds */
+  --muted: #a3a3a3; /* Muted text in dark mode */
+  --primary: #3b82f6; /* Contrasting blue primary for dark mode */
+  --primary-weak: #0b1a33; /* Darker weak primary for charts */
+  --ok: #10b981; /* Consistent success color */
+  --warn: #f59e0b; /* Consistent warning color */
+  --bad: #ef4444; /* Consistent error color */
+  --border: #1f2937; /* Darker borders */
+  --shadow: 0 10px 25px rgba(0, 0, 0, 0.35); /* Darker shadows */
+  --sidebar: #0a0f1a; /* Even darker sidebar background */
+  --sidebar-accent: #3b82f6; /* Consistent blue accent in dark mode */
 
-  /* Adjustments for dark theme based on original image's look */
-  --color-primary-dark: #1f2937; /* Darker background for sidebar/modal in dark theme */
-  --color-primary-light: #334155; /* Lighter accent for sidebar stats */
+  /* Additional adjustments for dark theme based on original image's look */
+  --color-primary-dark: #1f2937; /* Darker green/teal equivalent for dark theme sidebar */
+  --color-primary-light: #334155; /* Lighter green/teal equivalent for dark theme sidebar stats */
   --color-secondary: #2d3748;
-  --color-accent-orange: #f59e0b;
-  --color-accent-green: #10b981;
   --color-text: #e5e7eb;
   --color-text-light: #94a3b8;
   --color-text-white: #ffffff;
-  --color-background-dark: #1f2937; /* Main page background in dark theme */
-  --color-background-light: #0b1220; /* Form input background in dark theme */
-  --color-background-white: #0f172a; /* Card background in dark theme */
+  --color-background-dark: #1f2937;
+  --color-background-light: #0b1220;
+  --color-background-white: #0f172a;
   --color-border: #334155;
   --color-modal-bg: rgba(0, 0, 0, 0.6);
 }
 
 
-/* General & Layout */
+/* General Styles */
 * {
     box-sizing: border-box;
 }
@@ -61,8 +64,8 @@
 body {
     font-family: 'Inter', sans-serif;
     margin: 0;
-    background-color: var(--color-background-dark); /* Changed from --bg */
-    color: var(--color-text); /* Changed from --text */
+    background-color: var(--color-background-dark);
+    color: var(--color-text);
     display: grid;
     grid-template-columns: 20rem 1fr;
     gap: 2rem;
@@ -72,7 +75,7 @@ body {
 
 .dashboard-container {
     display: flex;
-    background-color: var(--color-background-white); /* Changed from --panel */
+    background-color: var(--color-background-white);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
     overflow: hidden;
@@ -109,7 +112,7 @@ body {
 .sidebar-stat-icon svg {
     width: 1.5rem;
     height: 1.5rem;
-    stroke: white;
+    stroke: white; /* Ensure SVG stroke in icon is white */
     stroke-width: 2;
     fill: none;
 }
@@ -148,9 +151,9 @@ body {
 .sidebar-nav a svg {
     width: 1.25rem;
     height: 1.25rem;
-    stroke: var(--color-text-white);
+    stroke: var(--color-text-white); /* Ensure SVG stroke in nav links is white */
     stroke-width: 2;
-    fill: none;
+    fill: none !important; /* IMPORTANT: This is the critical fix for SVG fill issue */
 }
 /* Main Content */
 .main-content {
@@ -161,17 +164,13 @@ body {
     gap: 2rem;
 }
 
-/* Topbar styles from previous version, adapted for current structure if used */
-/* Note: The new HTML provided removes the old .topbar HTML entirely and replaces it with a simple H2 and date in the main section.
-   So, these .topbar styles might not be directly applicable unless you reintroduce the topbar components.
-*/
-.topbar{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:0 0 22px 0;} /* Adapted padding */
-.search{display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--border); padding:10px 12px; border-radius:12px; min-width:320px; box-shadow:var(--shadow)}
-.search input{border:none; outline:none; background:transparent; width:100%; color:var(--text)}
+/* Topbar styles from original HTML */
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:0 0 22px 0;}
+.search{display:flex; align-items:center; gap:10px; background:var(--color-background-white); border:1px solid var(--color-border); padding:10px 12px; border-radius:12px; min-width:320px; box-shadow:var(--shadow)}
+.search input{border:none; outline:none; background:transparent; width:100%; color:var(--color-text)}
 .cap{display:flex; gap:10px}
-.btn{background:var(--primary); color:#fff; border:0; border-radius:10px; padding:10px 14px; font-weight:600; box-shadow:var(--shadow); cursor:pointer}
-.btn:disabled { background-color: var(--muted); cursor: not-allowed; }
-.ghost{background:transparent; color:var(--text); border:1px solid var(--border)}
+/* btn styles already defined in your provided CSS */
+.ghost{background:transparent; color:var(--color-text); border:1px solid var(--color-border)}
 .toggle{width:42px; height:42px; border-radius:12px; display:grid; place-items:center}
 
 
@@ -220,7 +219,7 @@ body {
     cursor: pointer;
 }
 .card-header-buttons button.active {
-    background-color: var(--color-primary-dark);
+    background-color: var(--color-primary-dark); /* Using sidebar dark color for active button */
     color: var(--color-text-white);
 }
 .stat-card {
@@ -254,8 +253,8 @@ body {
     padding: 0.75rem;
     border-radius: 0.75rem;
     border: 1px solid var(--color-border);
-    background: var(--color-background-light); /* Changed from --bg */
-    color: var(--color-text); /* Changed from --text */
+    background: var(--color-background-light);
+    color: var(--color-text);
     font-family: inherit;
     font-size: 0.875rem;
 }
