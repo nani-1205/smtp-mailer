@@ -6,14 +6,14 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time" // Used for parsing date in logs handler
+	"time"
 
 	"smtp-mailer/config"
 	"smtp-mailer/database"
 	"smtp-mailer/services"
 	"smtp-mailer/utils"
 
-	"github.com/gorilla/mux" // Needed for mux.Vars in GetLogsHandler
+	// "github.com/gorilla/mux" // <-- REMOVED THIS LINE: It's no longer used in this file
 )
 
 // SendMailRequest struct for parsing incoming JSON request
@@ -97,8 +97,6 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 			query = baseQuery + " WHERE (sent_at AT TIME ZONE 'Asia/Kolkata')::date = $1::date " + orderBy
 			args = append(args, queryDateStr)
 
-			// If a specific date is requested, and a limit is specified, use that limit.
-			// Otherwise, use the default for historical logs.
 			if limitStr != "" {
 				parsedLimit, err := strconv.Atoi(limitStr)
 				if err == nil && parsedLimit > 0 {
