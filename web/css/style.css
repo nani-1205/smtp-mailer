@@ -91,21 +91,21 @@ body {
 /* Main Content Area */
 .main-content {
     flex-grow: 1;
-    padding: 25px; /* Slightly reduced padding */
-    padding-left: 40px; /* Adjust spacing from sidebar */
+    padding: 20px; /* Reduced overall padding */
+    padding-left: 30px; /* Slightly reduced spacing from sidebar */
     box-sizing: border-box;
 }
 
 header {
     background-color: transparent;
     color: var(--text-color);
-    padding: 0 0 25px 0; /* Reduced bottom padding */
+    padding: 0 0 20px 0; /* Reduced bottom padding */
     text-align: left;
 }
 
 header h1 {
     margin: 0;
-    font-size: 2.8em;
+    font-size: 2.5em; /* Slightly smaller header font */
     font-weight: 700;
     color: var(--primary-color);
 }
@@ -125,7 +125,7 @@ header h1 {
 /* Cards */
 .card {
     background-color: var(--card-background);
-    padding: 25px; /* Slightly reduced padding */
+    padding: 20px; /* Reduced internal padding */
     border-radius: 12px;
     box-shadow: var(--box-shadow-light);
     margin-bottom: 20px; /* Consistent margin between cards */
@@ -140,16 +140,16 @@ header h1 {
 h2 {
     color: var(--primary-color);
     margin-top: 0;
-    margin-bottom: 15px; /* Reduced margin */
-    font-size: 1.6em;
+    margin-bottom: 10px; /* Reduced margin */
+    font-size: 1.5em; /* Slightly smaller heading font */
     font-weight: 600;
 }
 
 h3 {
     color: var(--light-text-color);
     margin-top: 0;
-    margin-bottom: 10px; /* Reduced margin */
-    font-size: 1.2em;
+    margin-bottom: 8px; /* Reduced margin */
+    font-size: 1.1em;
     font-weight: 500;
 }
 
@@ -158,14 +158,14 @@ h3 {
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
+    gap: 15px; /* Reduced gap between grid items */
     align-items: start; /* Align items to the top to prevent stretching */
 }
 
-/* Make summary cards slightly more compact and align */
+/* Make summary cards more compact and align */
 .card-summary {
-    padding: 20px 25px;
-    height: 150px; /* Fixed height for consistent row alignment */
+    padding: 15px 20px; /* Further reduced padding */
+    min-height: 100px; /* Minimum height for consistency */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -173,7 +173,7 @@ h3 {
 }
 
 .card-summary .summary-value {
-    font-size: 2.8em;
+    font-size: 2.5em; /* Slightly smaller value font */
     font-weight: 700;
     margin-top: 5px;
     margin-bottom: 0;
@@ -183,22 +183,22 @@ h3 {
 .total-sent .summary-value { color: var(--secondary-color); }
 .remaining .summary-value { color: var(--primary-color); }
 
-/* Chart Cards - Give fixed height to prevent excessive stretching when empty */
+/* Chart Cards - Give min-height to allow chart to render and grow if needed */
 .chart-card-lg {
     grid-column: span 2; /* Takes 2 columns on larger screens */
-    height: 350px; /* Fixed height for consistent layout */
+    min-height: 300px; /* Min height for consistency */
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding-bottom: 20px; /* Ensure space for legend */
+    padding-bottom: 15px; /* Ensure space for legend */
 }
 
 .chart-card-sm {
-    height: 350px; /* Fixed height */
+    min-height: 300px; /* Min height */
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding-bottom: 20px; /* Ensure space for legend */
+    padding-bottom: 15px; /* Ensure space for legend */
 }
 
 .full-width {
@@ -209,7 +209,7 @@ h3 {
 .chart-card-lg canvas,
 .chart-card-sm canvas {
     flex-grow: 1; /* Make canvas fill available space */
-    max-height: calc(100% - 70px); /* Account for h2 and padding */
+    max-height: calc(100% - 60px); /* Account for h2 and padding */
     width: 100% !important; /* Override Chart.js inline styles */
     height: auto !important; /* Override Chart.js inline styles */
 }
@@ -222,12 +222,12 @@ h3 {
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 15px; /* Reduced margin */
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 5px; /* Reduced margin */
     font-weight: 500;
     color: var(--light-text-color);
 }
@@ -237,10 +237,10 @@ h3 {
 .form-group textarea,
 .form-group input[type="date"] {
     width: calc(100% - 20px);
-    padding: 12px 10px;
+    padding: 10px; /* Slightly reduced padding */
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    font-size: 1em;
+    font-size: 0.95em; /* Slightly smaller font */
     color: var(--text-color);
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
     background-color: var(--background-color);
@@ -258,10 +258,10 @@ h3 {
 button {
     background-color: var(--primary-color);
     color: white;
-    padding: 12px 25px;
+    padding: 10px 20px; /* Slightly reduced padding */
     border: none;
     border-radius: 8px;
-    font-size: 1.1em;
+    font-size: 1em; /* Slightly smaller font */
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
     width: 100%;
@@ -275,8 +275,8 @@ button:hover {
 }
 
 .message-area {
-    margin-top: 20px;
-    padding: 15px;
+    margin-top: 15px; /* Reduced margin */
+    padding: 12px; /* Reduced padding */
     border-radius: 8px;
     font-weight: 500;
     text-align: center;
@@ -296,8 +296,8 @@ button:hover {
 
 /* Daily Limit Section (old design for now, can be removed if chart is primary) */
 .limit-stats p {
-    font-size: 1.1em;
-    margin: 10px 0;
+    font-size: 1em; /* Slightly smaller font */
+    margin: 8px 0; /* Reduced margin */
     color: var(--light-text-color);
 }
 
@@ -311,8 +311,8 @@ button:hover {
     background-color: var(--border-color);
     border-radius: 5px;
     overflow: hidden;
-    height: 20px;
-    margin-top: 20px;
+    height: 18px; /* Slightly reduced height */
+    margin-top: 15px; /* Reduced margin */
 }
 
 .progress-bar {
@@ -325,9 +325,9 @@ button:hover {
 /* Email Logs Section */
 .logs-controls {
     display: flex;
-    flex-wrap: wrap; /* Allow wrapping on small screens */
-    gap: 15px;
-    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px; /* Reduced gap */
+    margin-bottom: 15px; /* Reduced margin */
     align-items: center;
 }
 
@@ -338,31 +338,32 @@ button:hover {
 
 .logs-controls button {
     width: auto;
-    padding: 10px 20px;
+    padding: 8px 15px; /* Reduced padding */
+    font-size: 0.9em;
     background-color: var(--primary-color);
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 0; /* Remove top margin from table */
+    margin-top: 0;
 }
 
 table th,
 table td {
     border: 1px solid var(--border-color);
-    padding: 12px 15px;
+    padding: 10px 12px; /* Reduced padding */
     text-align: left;
-    font-size: 0.95em;
+    font-size: 0.9em; /* Slightly smaller font */
 }
 
 table th {
-    background-color: #f0f0f5; /* Lighter header background */
+    background-color: #f0f0f5;
     color: var(--text-color);
     font-weight: 600;
     text-transform: uppercase;
-    font-size: 0.85em;
-    position: sticky; /* Keep header visible on scroll */
+    font-size: 0.8em; /* Slightly smaller font */
+    position: sticky;
     top: 0;
     z-index: 1;
 }
@@ -372,12 +373,12 @@ table tbody tr:nth-child(even) {
 }
 
 table tbody tr:hover {
-    background-color: #eef2f7; /* Lighter hover */
+    background-color: #eef2f7;
 }
 
 .table-container {
     overflow-x: auto;
-    max-height: 400px; /* Limit height for scrollable table */
+    max-height: 350px; /* Slightly reduced max height for scrollable table */
     overflow-y: auto;
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -398,7 +399,7 @@ td.failed {
     .sidebar {
         width: 100%;
         height: auto;
-        padding: 20px;
+        padding: 15px; /* Reduced padding */
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
@@ -406,7 +407,7 @@ td.failed {
     .sidebar .logo {
         width: 100%;
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 15px; /* Reduced margin */
     }
     .sidebar nav ul {
         display: flex;
@@ -414,35 +415,39 @@ td.failed {
         justify-content: center;
     }
     .sidebar nav ul li {
-        margin: 5px 10px;
+        margin: 5px 8px; /* Reduced margin */
     }
     .sidebar nav ul li a {
-        padding: 8px 12px;
-        font-size: 0.9em;
+        padding: 6px 10px; /* Reduced padding */
+        font-size: 0.85em;
     }
     .sidebar-footer {
-        display: none; /* Hide on smaller screens */
+        display: none;
     }
     .main-content {
-        padding: 20px;
-        padding-left: 20px; /* Reset padding */
+        padding: 15px; /* Reduced padding */
+        padding-left: 15px; /* Reset padding */
     }
     .dashboard-grid {
-        grid-template-columns: 1fr; /* Stack columns */
+        grid-template-columns: 1fr;
+        gap: 15px; /* Consistent gap */
     }
     .chart-card-lg, .chart-card-sm {
-        height: 300px; /* Keep charts a reasonable height on smaller screens */
+        min-height: 250px; /* Keep charts a reasonable height on smaller screens */
     }
     .card-summary {
-        height: auto; /* Allow auto height on smaller screens */
+        min-height: auto; /* Allow auto height on smaller screens */
         padding: 15px 20px;
     }
+    .card-summary h3 {
+        font-size: 1em;
+    }
     .card-summary .summary-value {
-        font-size: 2.2em; /* Smaller font on small screens */
+        font-size: 2em; /* Smaller font on small screens */
     }
     .logs-controls {
         flex-direction: column;
-        align-items: stretch; /* Stretch controls to full width */
+        align-items: stretch;
     }
     .logs-controls button, .logs-controls input {
         width: 100%;
