@@ -1,62 +1,71 @@
-/* CSS Variables for theming based on the image */
+/* CSS Variables for theming based on the desired image */
 :root {
-  --color-primary-dark: #1e3a38; /* Dark green/teal for sidebar */
-  --color-primary-light: #4c8a82; /* Lighter green/teal for sidebar stats */
-  --color-secondary: #f0f0f0;
-  --color-accent-orange: #f59e0b; /* Orange accent */
-  --color-accent-green: #34d399; /* Bright green for success */
-  --color-text: #0f172a; /* Dark text on light backgrounds */
-  --color-text-light: #a3a3a3; /* Muted text */
-  --color-text-white: #ffffff; /* White text on dark backgrounds */
-  --color-background-dark: #d8e6e5; /* Main page background light */
-  --color-background-light: #f1f5f9; /* Form input/table header background light */
-  --color-background-white: #ffffff; /* Card background light */
-  --color-border: #e2e8f0;
-  --color-modal-bg: rgba(0, 0, 0, 0.4);
-  --border-radius: 1rem;
-  --shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  --ok: var(--color-accent-green); /* Alias for success color */
-  --bad: #ef4444; /* Red for errors */
-  --warn: var(--color-accent-orange); /* Orange for warnings */
+  /* Main Palette from desired image */
+  --color-primary-dark: #1e3a38; /* Dark teal/green for sidebar background */
+  --color-primary-light: #4c8a82; /* Lighter teal/green for sidebar stats/accents */
+  --color-accent-orange: #f59e0b; /* Orange for "Remaining Today" */
+  --color-accent-green: #34d399; /* Bright green for "Sent Today" / success */
 
-  /* For the default (light) theme, these map to the blue tones in the example */
-  --primary: #2563eb; /* Blue primary for general use */
-  --primary-weak: #e7efff; /* Light blue for chart fills */
-  --sidebar-accent: #0b63f6; /* Blue accent for sidebar elements */
+  /* General UI Colors */
+  --color-text: #0f172a; /* Darkest text on light backgrounds */
+  --color-text-light: #a3a3a3; /* Muted text (used for labels, etc.) */
+  --color-text-white: #ffffff; /* White text on dark backgrounds */
+
+  /* Backgrounds */
+  --color-background-dark: #d8e6e5; /* Main page body background */
+  --color-background-light: #f1f5f9; /* Form input/table header/hover background */
+  --color-background-white: #ffffff; /* Card background */
+  --color-border: #e2e8f0; /* General border color */
+
+  /* Specifics */
+  --color-modal-bg: rgba(0, 0, 0, 0.4); /* Modal overlay */
+  --border-radius: 1rem;
+  --shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* General box shadow */
+
+  /* Status Colors (aliased for clarity) */
+  --ok: var(--color-accent-green);
+  --bad: #ef4444; /* Red for errors (consistent) */
+  --warn: var(--color-accent-orange); /* Orange for warnings (consistent) */
+
+  /* Overrides for generic blue 'primary' in Chart.js and other elements, if not explicitly using color-primary-dark/light */
+  --primary: var(--color-primary-dark); /* Default primary to dark teal */
+  --primary-weak: rgba(30, 58, 56, 0.12); /* Light transparent version of primary-dark for chart fills */
+  --sidebar-accent: var(--color-primary-light); /* Accent color for sidebar. Used in brand logo gradient. */
 }
 
-/* Dark Theme Adjustments */
+/* Dark Theme Adjustments (Placeholder - not fully matching the green/teal dark theme from mock) */
+/* If you want a dark theme that matches the green/teal aesthetic, these variables need to be explicitly set */
+/* based on a dark variant of that palette. For now, it defaults to a standard blue-ish dark mode. */
 [data-theme="dark"] {
-  --bg: #0b1220; /* Darker main background */
-  --panel: #0f172a; /* Darker card background */
-  --text: #e5e7eb; /* Light text on dark backgrounds */
-  --muted: #a3a3a3; /* Muted text in dark mode */
-  --primary: #3b82f6; /* Contrasting blue primary for dark mode */
-  --primary-weak: #0b1a33; /* Darker weak primary for charts */
-  --ok: #10b981; /* Consistent success color */
-  --warn: #f59e0b; /* Consistent warning color */
-  --bad: #ef4444; /* Consistent error color */
-  --border: #1f2937; /* Darker borders */
-  --shadow: 0 10px 25px rgba(0, 0, 0, 0.35); /* Darker shadows */
-  --sidebar: #0a0f1a; /* Even darker sidebar background */
-  --sidebar-accent: #3b82f6; /* Consistent blue accent in dark mode */
+  --bg: #0b1220;
+  --panel: #0f172a;
+  --text: #e5e7eb;
+  --muted: #a3a3a3;
+  --primary: #3b82f6; /* Default blue for dark mode */
+  --primary-weak: #0b1a33;
+  --border: #1f2937;
+  --shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+  --sidebar: #0a0f1a;
+  --sidebar-accent: #3b82f6;
 
-  /* Additional adjustments for dark theme based on original image's look */
-  --color-primary-dark: #1f2937; /* Darker green/teal equivalent for dark theme sidebar */
-  --color-primary-light: #334155; /* Lighter green/teal equivalent for dark theme sidebar stats */
-  --color-secondary: #2d3748;
+  /* Dark theme specific palette for current design */
+  --color-primary-dark: #101522; /* Very dark blue for sidebar */
+  --color-primary-light: #1f2937; /* Slightly lighter blue for sidebar stats */
+  --color-accent-orange: #f59e0b;
+  --color-accent-green: #10b981;
+
   --color-text: #e5e7eb;
   --color-text-light: #94a3b8;
   --color-text-white: #ffffff;
-  --color-background-dark: #1f2937;
-  --color-background-light: #0b1220;
-  --color-background-white: #0f172a;
+  --color-background-dark: #0b1220;
+  --color-background-light: #0f172a;
+  --color-background-white: #1f2937;
   --color-border: #334155;
   --color-modal-bg: rgba(0, 0, 0, 0.6);
 }
 
 
-/* General Styles */
+/* General & Layout */
 * {
     box-sizing: border-box;
 }
@@ -93,50 +102,62 @@ body {
     border-top-left-radius: var(--border-radius);
     border-bottom-left-radius: var(--border-radius);
 }
+.brand { /* Branding for Mailer Pro text */
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:8px 10px;
+    margin-bottom: 1.5rem; /* Space below brand */
+}
+.brand .logo { /* Container for the Mailer Pro icon */
+    width:34px; height:34px;
+    display:inline-grid; place-items:center;
+    border-radius:10px;
+    background:linear-gradient(135deg,var(--sidebar-accent),#22d3ee); /* Uses sidebar-accent from root/dark */
+    flex-shrink: 0; /* Prevent logo from shrinking */
+}
+.brand .logo svg { /* The Mailer Pro icon itself */
+    width:20px; height:20px;
+    fill: none !important; /* CRITICAL: Ensure no fill */
+    stroke: white;
+    stroke-width: 2;
+}
+.brand h1 { /* Mailer Pro text */
+    font-size:16px;
+    color:#fff;
+    margin:0;
+    letter-spacing:.3px;
+    white-space: nowrap; /* Prevent wrapping */
+}
+
+/* Sidebar Stat Cards */
 .sidebar-stat {
-    background-color: var(--color-primary-light);
+    background-color: var(--color-primary-light); /* Lighter teal/green */
     padding: 1.5rem;
-    border-radius: 0.75rem; /* Smaller border-radius for inner elements */
+    border-radius: 0.75rem;
     display: flex;
     align-items: center;
     gap: 1rem;
+    color: var(--color-text-white); /* Ensure text color is white for these cards */
 }
 .sidebar-stat-icon {
     width: 2.5rem;
     height: 2.5rem;
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.2); /* White with transparency */
     border-radius: 0.75rem;
     display: grid;
     place-items: center;
+    flex-shrink: 0; /* Prevent icon container from shrinking */
 }
-.sidebar-stat-icon svg {
+.sidebar-stat-icon svg { /* Icons inside sidebar stat cards */
     width: 1.5rem;
     height: 1.5rem;
     stroke: white;
     stroke-width: 2;
-    fill: none; /* Explicitly set fill to none */
+    fill: none !important; /* CRITICAL: Ensure no fill */
 }
-
-/* Specific overrides for sidebar nav SVG icons */
-.sidebar-nav a svg {
-    width: 1.25rem;
-    height: 1.25rem;
-    stroke: var(--color-text-white); /* White stroke color */
-    stroke-width: 2;
-    fill: none !important; /* CRITICAL FIX: Ensure no fill */
-    /* Often helps with SVG rendering if there are scaling issues */
-    shape-rendering: geometricPrecision;
-    overflow: visible; /* Ensure nothing is clipped */
-}
-/* Specific overrides for brand logo SVG icon */
-.brand .logo svg {
-    fill: none !important; /* CRITICAL FIX: Ensure no fill for brand logo */
-    stroke: white;
-    stroke-width: 2;
-}
-
 .sidebar-stat.orange {
-    background-color: var(--color-accent-orange);
+    background-color: var(--color-accent-orange); /* Override for orange stat card */
 }
 .sidebar-stat .value {
     font-size: 2rem;
@@ -148,10 +169,13 @@ body {
     font-weight: 500;
     line-height: 1.2;
 }
+
+/* Sidebar Navigation */
 .sidebar-nav {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    flex-grow: 1; /* Allow nav to take remaining space */
 }
 .sidebar-nav a {
     text-decoration: none;
@@ -161,11 +185,29 @@ body {
     align-items: center;
     gap: 1rem;
     padding: 0.75rem 1rem;
-    border-radius: 0.75rem; /* Smaller border-radius for inner elements */
+    border-radius: 0.75rem;
     transition: background-color 0.2s ease;
 }
 .sidebar-nav a:hover, .sidebar-nav a.active {
     background-color: rgba(255, 255, 255, 0.1);
+}
+.sidebar-nav a svg { /* Icons inside sidebar nav links */
+    width: 1.25rem;
+    height: 1.25rem;
+    stroke: var(--color-text-white);
+    stroke-width: 2;
+    fill: none !important; /* CRITICAL: Ensure no fill */
+    shape-rendering: geometricPrecision; /* Often helps with SVG rendering */
+    overflow: visible; /* Ensure nothing is clipped or hidden */
+    flex-shrink: 0; /* Prevent nav icons from shrinking */
+}
+.footer { /* Sidebar footer */
+    margin-top: auto; /* Push to bottom */
+    font-size: 0.75rem; /* Smaller font size */
+    opacity: 0.7;
+    color: var(--color-text-white);
+    padding: 1rem;
+    text-align: center;
 }
 
 /* Main Content */
@@ -177,89 +219,95 @@ body {
     gap: 2rem;
 }
 
-/* Topbar styles from original HTML */
-.topbar{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:0 0 22px 0;}
-.search{display:flex; align-items:center; gap:10px; background:var(--color-background-white); border:1px solid var(--color-border); padding:10px 12px; border-radius:12px; min-width:320px; box-shadow:var(--shadow)}
-.search input{border:none; outline:none; background:transparent; width:100%; color:var(--color-text)}
+/* Topbar styles */
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:16px; padding-bottom: 22px;} /* No top/side padding as it's within main-content */
+.topbar h2 { /* Dashboard title */
+    font-size:20px;
+    font-weight:800;
+    margin:0;
+    color:var(--color-text); /* Use main text color */
+}
+.topbar #todayDate {
+    color:var(--muted); /* Use muted text color */
+    font-weight:600;
+    white-space: nowrap; /* Prevent wrapping */
+}
 .cap{display:flex; gap:10px}
-/* btn styles already defined in your provided CSS */
-.btn{background:var(--primary); color:#fff; border:0; border-radius:10px; padding:10px 14px; font-weight:600; box-shadow:var(--shadow); cursor:pointer}
-.btn:disabled { background-color: var(--muted); cursor: not-allowed; }
-.ghost{background:transparent; color:var(--color-text); border:1px solid var(--color-border)}
+.search{
+    display:flex; align-items:center; gap:10px;
+    background:var(--color-background-white); /* Use white background */
+    border:1px solid var(--color-border);
+    padding:10px 12px;
+    border-radius:12px;
+    min-width:320px;
+    box-shadow:var(--shadow);
+}
+.search input{border:none; outline:none; background:transparent; width:100%; color:var(--color-text)}
+.search svg { /* Search icon */
+    width:16px; height:16px;
+    stroke:var(--color-text-light); /* Muted color for search icon */
+    fill: none;
+    flex-shrink: 0;
+}
+/* btn styles already defined in your provided CSS, re-map colors */
+.btn{background:var(--color-primary-dark); color:var(--color-text-white); border:0; border-radius:10px; padding:10px 14px; font-weight:600; box-shadow:var(--shadow); cursor:pointer}
+.btn:disabled { background-color: var(--color-text-light); cursor: not-allowed; } /* Muted for disabled */
+.btn.ghost{background:transparent; color:var(--color-text); border:1px solid var(--color-border); box-shadow:none;}
 .toggle{width:42px; height:42px; border-radius:12px; display:grid; place-items:center}
+.toggle svg { /* Theme toggle icons */
+    width:18px; height:18px;
+    stroke: var(--color-text); /* Default text color for light theme toggle icon */
+    fill: none;
+}
+[data-theme="dark"] .toggle svg {
+    stroke: var(--color-text-white); /* White for dark theme toggle icon */
+}
 
 
-/* Main Dashboard Grid */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    gap: 1.5rem;
+/* Main grid */
+main{padding:0;} /* Removed default padding from body main */
+.grid{display:grid; grid-template-columns:repeat(12,1fr); gap:1.5rem} /* Adjusted gap */
+
+/* Cards and Panels */
+.card{background:var(--color-background-white); border:1px solid var(--color-border); border-radius:var(--border-radius); box-shadow:var(--shadow)}
+.pad{padding:1.5rem} /* Use consistent padding */
+.stat{display:flex; align-items:center; gap:12px}
+.stat .i{width:40px; height:40px; border-radius:12px; display:grid; place-items:center; background:var(--color-background-light)} /* Light background for the icon container */
+.stat .i svg { /* Icons in overview stat cards */
+    width:18px; height:18px;
+    stroke: var(--color-primary-dark); /* Dark teal stroke color */
+    fill: none;
+    stroke-width: 2;
 }
-.card {
-    background-color: var(--color-background-white);
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    display: flex;
-    flex-direction: column;
-}
-.card.card-chart {
-    grid-column: span 6;
-}
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-.card-header h2 {
-    font-size: 1rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: var(--color-text-light);
-    margin: 0;
-}
-.card-header-buttons {
-    display: flex;
-    gap: 0.5rem;
-}
-.card-header-buttons button {
-    border: 1px solid var(--color-border);
-    background-color: var(--color-background-white);
-    color: var(--color-text-light);
-    border-radius: 0.75rem;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-}
-.card-header-buttons button.active {
-    background-color: var(--color-primary-dark); /* Using sidebar dark color for active button */
-    color: var(--color-text-white);
-}
-.stat-card {
-    grid-column: span 3;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 1.5rem;
-}
+.stat h3{margin:0; font-size:12px; color:var(--color-text-light); font-weight:600; text-transform:uppercase; letter-spacing:.08em}
+.stat .value{font-size:24px; font-weight:800; margin-top:6px}
+/* Specific color for stat values matching the image */
 .stat-card .value {
-    font-size: 2.5rem;
+    font-size: 2.5rem; /* Keep value size consistent */
     font-weight: 800;
 }
-.stat-card .label {
-    font-size: 0.875rem;
-    color: var(--color-text-light);
+/* IMPORTANT: Change these to use solid colors, not gradients, to match the target image */
+.stat-card:nth-child(1) .value { /* First stat card: Total Sent Today */
+    color: var(--color-accent-green); /* Bright green */
 }
+.stat-card:nth-child(2) .value { /* Second stat card: Remaining Today */
+    color: var(--color-accent-orange); /* Orange */
+}
+
+.panel-title{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px}
+.panel-title h2{font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0}
+
 /* Tables */
 .table{width:100%; border-collapse:collapse; margin-top:1rem}
 .table th,.table td{padding:12px 10px; border-bottom:1px solid var(--color-border); font-size:14px; text-align:left;}
-.table th{text-align:left; color:var(--color-text-light); font-weight:700}
+.table th{text-align:left; color:var(--color-text-light); font-weight:700; background-color: var(--color-background-light);} /* Header background */
+.table tbody tr:last-child td { border-bottom: none; } /* No border on last row */
+
 .badge{padding:6px 10px; border-radius:999px; font-weight:700; font-size:12px}
 .b-ok{background:rgba(52,211,153,.12); color:var(--ok)}
 .b-bad{background:rgba(239,68,68,.12); color:var(--bad)}
 .b-warn{background:rgba(245,158,11,.12); color:var(--warn)}
+
 /* Form Elements */
 .form-group { margin-bottom: 1rem; }
 .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.875rem; }
@@ -268,8 +316,8 @@ body {
     padding: 0.75rem;
     border-radius: 0.75rem;
     border: 1px solid var(--color-border);
-    background: var(--color-background-light); /* Changed from --bg */
-    color: var(--color-text); /* Changed from --text */
+    background: var(--color-background-light); /* Use light background for inputs */
+    color: var(--color-text);
     font-family: inherit;
     font-size: 0.875rem;
 }

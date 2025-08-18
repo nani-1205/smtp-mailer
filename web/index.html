@@ -63,11 +63,11 @@
 
     <main>
       <!-- Overview Section -->
-      <section id="section-overview" class="grid" style="margin-bottom:18px">
-        <!-- Stat cards -->
+      <section id="section-overview" class="grid"> <!-- Removed margin-bottom:18px here -->
+        <!-- Stat cards & Daily Sends chart in the same row -->
         <div class="card pad" style="grid-column:span 3">
           <div class="stat">
-            <div class="i"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg></div>
+            <div class="i"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg></div>
             <div>
               <h3>Sent Today</h3>
               <div class="value" id="overviewSentCount">0</div>
@@ -76,22 +76,22 @@
         </div>
         <div class="card pad" style="grid-column:span 3">
           <div class="stat">
-            <div class="i"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg></div>
+            <div class="i"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg></div>
             <div>
               <h3>Remaining Today</h3>
-              <div class="value" id="overviewRemainingCount">0</div> <!-- Dynamic, populated by JS -->
+              <div class="value" id="overviewRemainingCount">0</div>
             </div>
           </div>
         </div>
-
-        <!-- Charts -->
-        <div class="card pad" style="grid-column:span 6">
+        <div class="card pad" style="grid-column:span 6"> <!-- Adjusted to span 6 (6 + 3 + 3 = 12) -->
           <div class="panel-title"><h2>Daily Sends (Last 7 Days)</h2></div>
           <div class="chart-container">
             <canvas id="dailySendsChart"></canvas>
           </div>
         </div>
-        <div class="card pad" style="grid-column:span 6">
+
+        <!-- Email Status chart as a full-width item below -->
+        <div class="card pad" style="grid-column:span 12"> <!-- Adjusted to span 12 (full width) -->
           <div class="panel-title"><h2>Email Status Distribution</h2></div>
           <div class="chart-container">
             <canvas id="statusDistributionChart"></canvas>
@@ -148,7 +148,7 @@
               <div class="progress-container">
                 <div id="limitBar"></div>
               </div>
-              <strong id="limitText">0 / 0</strong> <!-- Dynamic, populated by JS -->
+              <strong id="limitText">0 / 0</strong>
             </div>
             <small style="color:var(--muted)">Mail sending will pause automatically after reaching 2,000 messages within 24 hours.</small>
           </div>
@@ -156,7 +156,7 @@
       </section>
     </main>
   </div>
-  <!-- Modal for sending an email (to be triggered by "Create Campaign" button) -->
+  <!-- Modal for sending an email -->
   <div id="sendEmailModal" class="modal-overlay">
       <div class="modal">
           <div class="modal-header">
@@ -185,6 +185,6 @@
       </div>
   </div>
 
-  <script src="/js/script.js"></script> <!-- Link to external JavaScript -->
+  <script src="/js/script.js"></script>
 </body>
 </html>

@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeIconMoon = $('#theme-icon-moon');
     const createCampaignBtn = $('#createCampaignBtn');
 
-    // Sidebar stat elements - Make sure these are found!
+    // Sidebar stat elements
     const sidebarSentCount = $('#sidebarSentCount');
     const sidebarRemainingCount = $('#sidebarRemainingCount');
 
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const logsTableBody = $('#logsTable tbody');
     const logDatePicker = $('#logDate');
 
-    // Send Email Form elements (main section) - These might be null if only modal is used
+    // Send Email Form elements (main section)
     const sendMailForm = $('#sendMailForm');
     const mainMailMessage = $('#mailMessage');
 
@@ -37,22 +37,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalSendMailForm = $('#modalSendMailForm');
     const modalMailMessage = $('#modalMailMessage');
 
+
     // Chart instances
-    let dailySendsChart = null;
-    let statusDistributionChart = null;
+    let dailySendsChart = null; // Initialize as null to check if already created
+    let statusDistributionChart = null; // Initialize as null
 
     // --- Utility Functions ---
     function displayMessage(message, type, targetElement) {
-        if (!targetElement) return; // Safely exit if element not found
+        if (!targetElement) {
+            console.warn(`Attempted to display message, but target element not found for type: ${type}`);
+            return; // Safely exit if element not found
+        }
         targetElement.textContent = message;
         targetElement.className = `message-area ${type}`;
         targetElement.style.display = 'block';
         setTimeout(() => {
             targetElement.style.display = 'none';
-        }, 4000);
+        }, 4000); // Hide after 4 seconds
     }
 
     function formatDateForDisplay(dateString) {
+        // Format for table display (e.g., "DD/MM/YYYY HH:MM:SS")
         const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
         return new Date(dateString).toLocaleString('en-GB', options);
     }
@@ -65,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return istDate.toISOString().split('T')[0]; // YYYY-MM-DD format (e.g., "2025-08-14")
     }
 
-    // --- Chart Styling Helpers ---
+    // --- Chart Styling Helpers (Adapted from new CSS variables) ---
     function getChartColors() {
         const style = getComputedStyle(document.body);
         return {
@@ -109,8 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (percentage >= 90) {
                         limitProgressBar.style.background = 'var(--warn)';
                     } else {
-                        // Use CSS variable directly for the gradient, ensures it adapts to theme
-                        limitProgressBar.style.background = 'linear-gradient(90deg, var(--primary), var(--sidebar-accent))';
+                        limitProgressBar.style.background = 'linear-gradient(90deg, var(--color-primary-dark), var(--color-primary-light))'; // Use new palette's gradient
                     }
                 }
 
@@ -140,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.data.length === 0) {
                         const row = logsTableBody.insertRow();
                         const cell = row.insertCell();
-                        cell.colSpan = 4;
+                        cell.colSpan = 4; // Table has 4 columns: Recipient, Subject, Result, Date
                         cell.textContent = "No logs found for this date.";
                         cell.style.textAlign = "center";
                         cell.style.padding = "20px";
@@ -180,11 +184,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const chartData = [successCount, failedCount];
 
                 if (statusDistributionChart) {
-                    statusDistributionChart.destroy();
+                    statusDistributionChart.destroy(); // Destroy old chart before creating new one
                 }
 
-                const ctx = $('#statusDistributionChart'); // Get canvas element
-                if (ctx) { // Check if canvas element exists
+                const ctx = $('#statusDistributionChart');
+                if (ctx) {
                     statusDistributionChart = new Chart(ctx.getContext('2d'), {
                         type: 'doughnut',
                         data: {
@@ -232,11 +236,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const formattedLabels = dates.map(dateStr => new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short' }));
 
                 if (dailySendsChart) {
-                    dailySendsChart.destroy();
+                    dailySendsChart.destroy(); // Destroy old chart
                 }
 
-                const ctx = $('#dailySendsChart'); // Get canvas element
-                if (ctx) { // Check if canvas element exists
+                const ctx = $('#dailySendsChart');
+                if (ctx) {
                     dailySendsChart = new Chart(ctx.getContext('2d'), {
                         type: 'line',
                         data: {
@@ -286,10 +290,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
 
     // Sidebar navigation
-    $$('.sidebar-nav a').forEach(a => {
+    $$('.nav a').forEach(a => { // Changed from .sidebar-nav a to .nav a based on html
         a.addEventListener('click', e => {
             e.preventDefault();
-            $$('.sidebar-nav a').forEach(navLink => navLink.classList.remove('active'));
+            $$('.nav a').forEach(navLink => navLink.classList.remove('active')); // Changed selector
             a.classList.add('active');
 
             const targetSectionId = a.dataset.section;
@@ -297,10 +301,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 section.style.display = 'none';
             });
             const targetElement = $(`#section-${targetSectionId}`);
-            if (targetElement) { // Ensure element exists before trying to set display
+            if (targetElement) {
                 targetElement.style.display = 'grid';
             }
-
 
             if (targetSectionId === 'logs') {
                 updateEmailLogs(logDatePicker.value);
@@ -309,15 +312,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Create Campaign Button (Topbar)
-    if (createCampaignBtn) { // Check if button exists
+    if (createCampaignBtn) {
         createCampaignBtn.addEventListener('click', () => {
             if (sendEmailModal) sendEmailModal.style.display = 'flex';
         });
     }
 
-
     // Close Modal Button
-    if (modalCloseBtn) { // Check if button exists
+    if (modalCloseBtn) {
         modalCloseBtn.addEventListener('click', () => {
             if (sendEmailModal) sendEmailModal.style.display = 'none';
             if (modalSendMailForm) modalSendMailForm.reset();
@@ -325,25 +327,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-
     // Theme Toggle
-    if (toggleThemeBtn) { // Check if button exists
+    if (toggleThemeBtn) {
         toggleThemeBtn.addEventListener('click', () => {
             const root = document.body;
             const currentTheme = root.dataset.theme;
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             root.dataset.theme = newTheme;
 
-            // Update icon display
             if (themeIconSun) themeIconSun.style.display = newTheme === 'light' ? 'block' : 'none';
             if (themeIconMoon) themeIconMoon.style.display = newTheme === 'dark' ? 'block' : 'none';
             
-            updateAllCharts(); // Crucial: Re-render charts to apply new theme colors
+            updateAllCharts();
         });
     }
 
-
-    // Send Mail Form Submission (main form - check if it exists)
+    // Send Mail Form Submission (main form)
     if (sendMailForm) {
         sendMailForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -379,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Send Mail Form Submission (modal form - check if it exists)
+    // Send Mail Form Submission (modal form)
     if (modalSendMailForm) {
         modalSendMailForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -420,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Log Date Picker Change
-    if (logDatePicker) { // Check if element exists
+    if (logDatePicker) {
         logDatePicker.addEventListener('change', () => {
             const selectedDate = logDatePicker.value;
             updateEmailLogs(selectedDate);
@@ -428,10 +427,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Search functionality for logs
-    if (searchInput) { // Check if element exists
+    if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
-            if (logsTableBody) { // Check if table body exists
+            if (logsTableBody) {
                 const rows = [...logsTableBody.rows];
                 rows.forEach(r => {
                     const rowText = r.textContent.toLowerCase();
@@ -447,13 +446,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Destroy existing charts to ensure new theme colors are applied
         if (dailySendsChart) {
             dailySendsChart.destroy();
-            dailySendsChart = null; // Clear reference
+            dailySendsChart = null;
         }
         if (statusDistributionChart) {
             statusDistributionChart.destroy();
-            statusDistributionChart = null; // Clear reference
+            statusDistributionChart = null;
         }
-        // Then call update functions which will re-create them with current theme colors
         updateDailySendsChartData();
         updateStatusDistributionChartData();
     }
@@ -462,19 +460,12 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDailyLimit();
         updateAllCharts();
         
-        // Ensure logDatePicker has a value before calling updateEmailLogs
         if (logDatePicker) {
             updateEmailLogs(logDatePicker.value);
         } else {
-            // Fallback for cases where logDatePicker might not be immediately available
             updateEmailLogs(getTodayISTDate());
         }
     }
-
-    // Set today's date in the date picker and topbar date display
-    const todayIST = getTodayISTDate();
-    if (logDatePicker) logDatePicker.value = todayIST; // Safely set value
-    if (todayDateSpan) todayDateSpan.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); // Safely set text
 
     // Set initial theme based on system preference or default to light
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -488,6 +479,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (themeIconMoon) themeIconMoon.style.display = 'none';
     }
 
+    // Set today's date in the date picker and topbar date display
+    const todayIST = getTodayISTDate();
+    if (logDatePicker) logDatePicker.value = todayIST;
+    if (todayDateSpan) todayDateSpan.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     // Initial load of all dashboard data
     updateAllDashboardData();
