@@ -1,0 +1,10 @@
+192.168.0.16 {
+    # Caddy will automatically generate and use a self-signed
+    # certificate for this local IP address.
+    # You will need to accept a one-time browser security warning.
+
+    # Reverse proxy all requests to your Go application container.
+    # 'app' is the service name in docker-compose.yml.
+    # '8080' is the port the Go app is listening on inside the Docker network.
+    reverse_proxy app:8080
+}
