@@ -96,7 +96,7 @@ body {
 .sidebar-stat {
     background-color: var(--color-primary-light);
     padding: 1.5rem;
-    border-radius: var(--border-radius);
+    border-radius: 0.75rem; /* Smaller border-radius for inner elements */
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -114,7 +114,7 @@ body {
     height: 1.5rem;
     stroke: white; /* Ensure SVG stroke in icon is white */
     stroke-width: 2;
-    fill: none;
+    fill: none; /* Make sure it's not filled */
 }
 .sidebar-stat.orange {
     background-color: var(--color-accent-orange);
@@ -142,7 +142,7 @@ body {
     align-items: center;
     gap: 1rem;
     padding: 0.75rem 1rem;
-    border-radius: 0.75rem;
+    border-radius: 0.75rem; /* Smaller border-radius for inner elements */
     transition: background-color 0.2s ease;
 }
 .sidebar-nav a:hover, .sidebar-nav a.active {
@@ -154,6 +154,7 @@ body {
     stroke: var(--color-text-white); /* Ensure SVG stroke in nav links is white */
     stroke-width: 2;
     fill: none !important; /* IMPORTANT: This is the critical fix for SVG fill issue */
+    shape-rendering: geometricPrecision; /* Often helps with SVG rendering */
 }
 /* Main Content */
 .main-content {
@@ -170,6 +171,8 @@ body {
 .search input{border:none; outline:none; background:transparent; width:100%; color:var(--color-text)}
 .cap{display:flex; gap:10px}
 /* btn styles already defined in your provided CSS */
+.btn{background:var(--primary); color:#fff; border:0; border-radius:10px; padding:10px 14px; font-weight:600; box-shadow:var(--shadow); cursor:pointer}
+.btn:disabled { background-color: var(--muted); cursor: not-allowed; }
 .ghost{background:transparent; color:var(--color-text); border:1px solid var(--color-border)}
 .toggle{width:42px; height:42px; border-radius:12px; display:grid; place-items:center}
 
@@ -253,8 +256,8 @@ body {
     padding: 0.75rem;
     border-radius: 0.75rem;
     border: 1px solid var(--color-border);
-    background: var(--color-background-light);
-    color: var(--color-text);
+    background: var(--color-background-light); /* Changed from --bg */
+    color: var(--color-text); /* Changed from --text */
     font-family: inherit;
     font-size: 0.875rem;
 }

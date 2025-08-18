@@ -39,7 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Chart instances
-    let dailySendsChart, statusDistributionChart;
+    let dailySendsChart = null; // Initialize as null to check if already created
+    let statusDistributionChart = null; // Initialize as null
 
     // --- Utility Functions ---
     function displayMessage(message, type, targetElement) {
@@ -76,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
             okColor: style.getPropertyValue('--ok'),
             badColor: style.getPropertyValue('--bad'),
             warnColor: style.getPropertyValue('--warn'),
-            primaryWeak: style.getPropertyValue('--primary-weak') // For line chart fill
+            primaryWeak: style.getPropertyValue('--primary-weak')
         };
     }
 
@@ -103,11 +104,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const percentage = (current_count / limit) * 100;
                 limitProgressBar.style.width = `${Math.min(percentage, 100)}%`;
 
-                // Optionally, update progress bar color based on usage percentage
+                // Update progress bar color based on usage percentage
                 if (percentage >= 100) {
-                     limitProgressBar.style.background = 'var(--bad)';
+                     limitProgressBar.style.background = 'var(--bad)'; // Use direct color for bad
                 } else if (percentage >= 90) {
-                     limitProgressBar.style.background = 'var(--warn)';
+                     limitProgressBar.style.background = 'var(--warn)'; // Use direct color for warning
                 } else {
                      // Revert to default gradient from CSS variable (must be in background property)
                      limitProgressBar.style.background = 'linear-gradient(90deg, var(--primary), #22d3ee)';
@@ -121,13 +122,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function updateEmailLogs(date) { // 'date' parameter is now required
+    async function updateEmailLogs(date) {
         try {
             let url = `/api/logs?date=${date}`;
-            // If it's today's date, fetch only newest 5 for overview purposes.
-            // For other dates, fetch a larger set (e.g., 50) as history.
             if (date === getTodayISTDate()) {
-                url += `&limit=5`; // Default for today's logs view
+                url += `&limit=5`; // Default for today's logs overview
             } else {
                 url += `&limit=50`; // Default for selected date view
             }
@@ -136,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (data.status === 'success') {
-                logsTableBody.innerHTML = ''; // Clear existing logs
+                logsTableBody.innerHTML = '';
                 if (data.data.length === 0) {
                     const row = logsTableBody.insertRow();
                     const cell = row.insertCell();
@@ -178,31 +177,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 const failedCount = data.data.Failed || 0;
                 const chartData = [successCount, failedCount]; // Only Sent and Failed for this chart
 
+                // Destroy existing chart before re-creating for theme changes
                 if (statusDistributionChart) {
-                    statusDistributionChart.data.datasets[0].data = chartData;
-                    // Update background colors in case theme changed
-                    statusDistributionChart.data.datasets[0].backgroundColor = [colors.okColor, colors.badColor];
-                    statusDistributionChart.update();
-                } else {
-                    const ctx = $('#statusDistributionChart').getContext('2d');
-                    statusDistributionChart = new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Sent', 'Failed'], // Changed from Success, Failed, Pending to Sent, Failed
-                            datasets: [{
-                                data: chartData,
-                                backgroundColor: [colors.okColor, colors.badColor],
-                                borderWidth: 0
-                            }]
-                        },
-                        options: {
+                    statusDistributionChart.destroy();
+                }
+
+                const ctx = $('#statusDistributionChart').getContext('2d');
+                statusDistributionChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Sent', 'Failed'], // Changed from Success, Failed, Pending to Sent, Failed
+                        datasets: [{
+                            data: chartData,
+                            backgroundColor: [colors.okColor, colors.badColor],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
                             responsive: true,
                             maintainAspectRatio: false,
                             plugins: {
                                 legend: {
                                     position: 'bottom',
                                     labels: {
-                                        color: colors.textColor, // Use dynamic text color
+                                        color: colors.textColor, // Dynamic text color for legend labels
                                         boxWidth: 12,
                                         padding: 20,
                                         font: { family: 'Inter', size: 12, weight: '500' }
@@ -212,7 +210,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             cutout: '65%', // Inner hole size
                         }
                     });
-                }
             }
         } catch (error) {
             console.error('Error fetching status distribution:', error);
@@ -222,67 +219,59 @@ document.addEventListener('DOMContentLoaded', () => {
     async function updateDailySendsChartData() {
         const colors = getChartColors();
         try {
-            const response = await fetch('/api/stats/daily-sends?days=7'); // Fetch last 7 days
+            const response = await fetch('/api/stats/daily-sends?days=7');
             const data = await response.json();
 
             if (data.status === 'success') {
-                const dates = Object.keys(data.data).sort(); // Get sorted dates
+                const dates = Object.keys(data.data).sort();
                 const counts = dates.map(date => data.data[date]);
 
-                // Format labels to be short weekday names (e.g., Mon, Tue)
                 const formattedLabels = dates.map(dateStr => new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short' }));
 
+                // Destroy existing chart before re-creating for theme changes
                 if (dailySendsChart) {
-                    dailySendsChart.data.labels = formattedLabels;
-                    dailySendsChart.data.datasets[0].data = counts;
-                    // Update colors in case theme changed
-                    dailySendsChart.data.datasets[0].borderColor = colors.primaryColor;
-                    dailySendsChart.data.datasets[0].backgroundColor = colors.primaryWeak;
-                    dailySendsChart.options.scales.x.ticks.color = colors.textColor;
-                    dailySendsChart.options.scales.y.grid.color = colors.gridColor;
-                    dailySendsChart.options.scales.y.ticks.color = colors.textColor;
-                    dailySendsChart.update();
-                } else {
-                    const ctx = $('#dailySendsChart').getContext('2d');
-                    dailySendsChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: formattedLabels,
-                            datasets: [{
-                                label: 'Emails Sent',
-                                data: counts,
-                                tension: 0.4, // Smooth curve
-                                fill: true,
-                                backgroundColor: colors.primaryWeak, // Fill color under the line
-                                borderColor: colors.primaryColor, // Line color
-                                borderWidth: 2,
-                                pointRadius: 0 // No visible points on the line
-                            }]
+                    dailySendsChart.destroy();
+                }
+
+                const ctx = $('#dailySendsChart').getContext('2d');
+                dailySendsChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: formattedLabels,
+                        datasets: [{
+                            label: 'Emails Sent',
+                            data: counts,
+                            tension: 0.4, // Smooth curve
+                            fill: true,
+                            backgroundColor: colors.primaryWeak, // Dynamic fill color
+                            borderColor: colors.primaryColor, // Line color
+                            borderWidth: 2,
+                            pointRadius: 0 // No visible points on the line
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false } // No legend for this chart
                         },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false } // No legend for this chart
+                        scales: {
+                            x: {
+                                grid: { display: false }, // No vertical grid lines
+                                ticks: { color: colors.textColor, font: { family: 'Inter', size: 11 } }
                             },
-                            scales: {
-                                x: {
-                                    grid: { display: false }, // No vertical grid lines
-                                    ticks: { color: colors.textColor, font: { family: 'Inter', size: 11 } }
-                                },
-                                y: {
-                                    beginAtZero: true,
-                                    grid: { color: colors.gridColor }, // Horizontal grid lines
-                                    ticks: {
-                                        color: colors.textColor,
-                                        precision: 0, // Integer ticks for counts
-                                        font: { family: 'Inter', size: 11 }
-                                    }
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: colors.gridColor }, // Horizontal grid lines
+                                ticks: {
+                                    color: colors.textColor,
+                                    precision: 0, // Integer ticks for counts
+                                    font: { family: 'Inter', size: 11 }
                                 }
                             }
                         }
-                    });
-                }
+                    }
+                });
             }
         } catch (error) {
             console.error('Error fetching daily sends data:', error);
@@ -296,20 +285,15 @@ document.addEventListener('DOMContentLoaded', () => {
     $$('.sidebar-nav a').forEach(a => {
         a.addEventListener('click', e => {
             e.preventDefault();
-            // Remove 'active' from all nav links
             $$('.sidebar-nav a').forEach(navLink => navLink.classList.remove('active'));
-            // Add 'active' to the clicked link
             a.classList.add('active');
 
-            const targetSectionId = a.dataset.section; // Get section ID from data-section attribute
-            // Hide all main content sections
+            const targetSectionId = a.dataset.section;
             $$('main section.grid').forEach(section => {
                 section.style.display = 'none';
             });
-            // Display the target section
-            $(`#section-${targetSectionId}`).style.display = 'grid'; // Ensure it's displayed as grid
+            $(`#section-${targetSectionId}`).style.display = 'grid';
 
-            // If navigating to logs, ensure it updates
             if (targetSectionId === 'logs') {
                 updateEmailLogs(logDatePicker.value);
             }
@@ -323,19 +307,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Close Modal Button
     modalCloseBtn.addEventListener('click', () => {
-        sendEmailModal.style.display = 'none'; // Hide the modal
-        modalSendMailForm.reset(); // Clear modal form
-        modalMailMessage.style.display = 'none'; // Hide modal message
+        sendEmailModal.style.display = 'none';
+        modalSendMailForm.reset();
+        modalMailMessage.style.display = 'none';
     });
 
     // Theme Toggle
     toggleThemeBtn.addEventListener('click', () => {
         const root = document.body;
-        const isDark = root.dataset.theme === 'dark';
-        root.dataset.theme = isDark ? 'light' : 'dark';
-        themeIconSun.style.display = isDark ? 'block' : 'none'; // Show sun if switching to light
-        themeIconMoon.style.display = isDark ? 'none' : 'block'; // Show moon if switching to dark
-        updateAllCharts(); // Re-render charts to pick up new theme colors
+        const currentTheme = root.dataset.theme;
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        root.dataset.theme = newTheme;
+
+        // Update icon display
+        if (newTheme === 'dark') {
+            themeIconSun.style.display = 'none';
+            themeIconMoon.style.display = 'block';
+        } else {
+            themeIconSun.style.display = 'block';
+            themeIconMoon.style.display = 'none';
+        }
+        
+        updateAllCharts(); // Crucial: Re-render charts to apply new theme colors
     });
 
     // Send Mail Form Submission (main form)
@@ -368,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error sending email:', error);
             displayMessage('An unexpected error occurred. Please try again.', 'error', mainMailMessage);
         } finally {
-            if (submitButton) submitButton.disabled = false; // Re-enable button
+            if (submitButton) submitButton.disabled = false;
         }
     });
 
@@ -397,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateAllDashboardData(); // Refresh all dashboard data
                 setTimeout(() => { // Hide modal after successful send and message display
                     sendEmailModal.style.display = 'none';
-                    modalMailMessage.style.display = 'none'; // Hide message immediately
+                    modalMailMessage.style.display = 'none';
                 }, 2000); // 2 second delay before hiding modal
             } else {
                 displayMessage(data.message, 'error', modalMailMessage);
@@ -406,22 +399,21 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error sending email:', error);
             displayMessage('An unexpected error occurred. Please try again.', 'error', modalMailMessage);
         } finally {
-            if (submitButton) submitButton.disabled = false; // Re-enable button
+            if (submitButton) submitButton.disabled = false;
         }
     });
 
     // Log Date Picker Change
     logDatePicker.addEventListener('change', () => {
         const selectedDate = logDatePicker.value;
-        updateEmailLogs(selectedDate); // Now this simply filters by date
+        updateEmailLogs(selectedDate);
     });
 
     // Search functionality for logs (filters what's currently displayed)
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
-        const rows = [...logsTableBody.rows]; // Get all current rows
+        const rows = [...logsTableBody.rows];
         rows.forEach(r => {
-            // Check if text content of any cell matches query
             const rowText = r.textContent.toLowerCase();
             r.style.display = rowText.includes(query) ? '' : 'none';
         });
@@ -430,13 +422,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // ====== Initial Load & Refresh Logic ======
 
     function updateAllCharts() {
+        // Destroy existing charts to ensure new theme colors are applied
+        if (dailySendsChart) {
+            dailySendsChart.destroy();
+            dailySendsChart = null; // Clear reference
+        }
+        if (statusDistributionChart) {
+            statusDistributionChart.destroy();
+            statusDistributionChart = null; // Clear reference
+        }
+        // Then call update functions which will re-create them with current theme colors
         updateDailySendsChartData();
         updateStatusDistributionChartData();
     }
 
     function updateAllDashboardData() {
         updateDailyLimit();
-        updateAllCharts();
+        updateAllCharts(); // This will handle re-initialization and color updates
         updateEmailLogs(getTodayISTDate()); // Load today's logs initially for the logs section
     }
 
