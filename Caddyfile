@@ -1,3 +1,10 @@
+# Caddy global options block
+{
+    # This tells Caddy to not even attempt to get a public certificate
+    # for any site in this Caddyfile, which is perfect for local dev.
+    acme_ca off
+}
+
 192.168.0.16 {
     # This directive tells Caddy to generate and use a self-signed
     # certificate from its own local Certificate Authority (CA).
