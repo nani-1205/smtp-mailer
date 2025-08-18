@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeIconMoon = $('#theme-icon-moon');
     const createCampaignBtn = $('#createCampaignBtn');
 
-    // Sidebar stat elements
+    // Sidebar stat elements - Make sure these are found!
     const sidebarSentCount = $('#sidebarSentCount');
     const sidebarRemainingCount = $('#sidebarRemainingCount');
 
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const logsTableBody = $('#logsTable tbody');
     const logDatePicker = $('#logDate');
 
-    // Send Email Form elements (main section)
+    // Send Email Form elements (main section) - These might be null if only modal is used
     const sendMailForm = $('#sendMailForm');
     const mainMailMessage = $('#mailMessage');
 
@@ -37,23 +37,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalSendMailForm = $('#modalSendMailForm');
     const modalMailMessage = $('#modalMailMessage');
 
-
     // Chart instances
-    let dailySendsChart = null; // Initialize as null to check if already created
-    let statusDistributionChart = null; // Initialize as null
+    let dailySendsChart = null;
+    let statusDistributionChart = null;
 
     // --- Utility Functions ---
     function displayMessage(message, type, targetElement) {
+        if (!targetElement) return; // Safely exit if element not found
         targetElement.textContent = message;
         targetElement.className = `message-area ${type}`;
         targetElement.style.display = 'block';
         setTimeout(() => {
             targetElement.style.display = 'none';
-        }, 4000); // Hide after 4 seconds
+        }, 4000);
     }
 
     function formatDateForDisplay(dateString) {
-        // Format for table display (e.g., "DD/MM/YYYY HH:MM:SS")
         const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
         return new Date(dateString).toLocaleString('en-GB', options);
     }
@@ -66,14 +65,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return istDate.toISOString().split('T')[0]; // YYYY-MM-DD format (e.g., "2025-08-14")
     }
 
-    // --- Chart Styling Helpers (Adapted from new CSS variables) ---
+    // --- Chart Styling Helpers ---
     function getChartColors() {
-        // Dynamically get CSS variable values for charts
         const style = getComputedStyle(document.body);
         return {
             gridColor: style.getPropertyValue('--border'),
             textColor: style.getPropertyValue('--muted'),
-            primaryColor: style.getPropertyValue('--primary'), // Adjusted for dark theme in CSS
+            primaryColor: style.getPropertyValue('--primary'),
             okColor: style.getPropertyValue('--ok'),
             badColor: style.getPropertyValue('--bad'),
             warnColor: style.getPropertyValue('--warn'),
@@ -91,27 +89,29 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.status === 'success') {
                 const { current_count, limit, remaining } = data.data;
 
-                // Update Sidebar stats
-                sidebarSentCount.textContent = current_count.toLocaleString();
-                sidebarRemainingCount.textContent = remaining.toLocaleString();
+                // Safely update sidebar stats
+                if (sidebarSentCount) sidebarSentCount.textContent = current_count.toLocaleString();
+                if (sidebarRemainingCount) sidebarRemainingCount.textContent = remaining.toLocaleString();
 
-                // Update Overview Section stat cards
-                overviewSentCount.textContent = current_count.toLocaleString();
-                overviewRemainingCount.textContent = remaining.toLocaleString();
+                // Safely update overview stats
+                if (overviewSentCount) overviewSentCount.textContent = current_count.toLocaleString();
+                if (overviewRemainingCount) overviewRemainingCount.textContent = remaining.toLocaleString();
 
-                // Update Daily Limit Section (via text and progress bar)
-                limitTextSpan.textContent = `${current_count.toLocaleString()} / ${limit.toLocaleString()}`;
-                const percentage = (current_count / limit) * 100;
-                limitProgressBar.style.width = `${Math.min(percentage, 100)}%`;
-
-                // Update progress bar color based on usage percentage
-                if (percentage >= 100) {
-                     limitProgressBar.style.background = 'var(--bad)'; // Use direct color for bad
-                } else if (percentage >= 90) {
-                     limitProgressBar.style.background = 'var(--warn)'; // Use direct color for warning
-                } else {
-                     // Revert to default gradient from CSS variable (must be in background property)
-                     limitProgressBar.style.background = 'linear-gradient(90deg, var(--primary), #22d3ee)';
+                // Safely update daily limit section
+                if (limitTextSpan) limitTextSpan.textContent = `${current_count.toLocaleString()} / ${limit.toLocaleString()}`;
+                if (limitProgressBar) {
+                    const percentage = (current_count / limit) * 100;
+                    limitProgressBar.style.width = `${Math.min(percentage, 100)}%`;
+                    
+                    // Update progress bar color
+                    if (percentage >= 100) {
+                        limitProgressBar.style.background = 'var(--bad)';
+                    } else if (percentage >= 90) {
+                        limitProgressBar.style.background = 'var(--warn)';
+                    } else {
+                        // Use CSS variable directly for the gradient, ensures it adapts to theme
+                        limitProgressBar.style.background = 'linear-gradient(90deg, var(--primary), var(--sidebar-accent))';
+                    }
                 }
 
             } else {
@@ -126,43 +126,45 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             let url = `/api/logs?date=${date}`;
             if (date === getTodayISTDate()) {
-                url += `&limit=5`; // Default for today's logs overview
+                url += `&limit=5`;
             } else {
-                url += `&limit=50`; // Default for selected date view
+                url += `&limit=50`;
             }
 
             const response = await fetch(url);
             const data = await response.json();
 
             if (data.status === 'success') {
-                logsTableBody.innerHTML = '';
-                if (data.data.length === 0) {
-                    const row = logsTableBody.insertRow();
-                    const cell = row.insertCell();
-                    cell.colSpan = 4; // Table has 4 columns now: Recipient, Subject, Result, Date
-                    cell.textContent = "No logs found for this date.";
-                    cell.style.textAlign = "center";
-                    cell.style.padding = "20px";
-                    return;
+                if (logsTableBody) {
+                    logsTableBody.innerHTML = '';
+                    if (data.data.length === 0) {
+                        const row = logsTableBody.insertRow();
+                        const cell = row.insertCell();
+                        cell.colSpan = 4;
+                        cell.textContent = "No logs found for this date.";
+                        cell.style.textAlign = "center";
+                        cell.style.padding = "20px";
+                        return;
+                    }
+
+                    data.data.forEach(log => {
+                        const row = logsTableBody.insertRow();
+                        const statusBadgeClass = log.status === 'Success' ? 'b-ok' : 'b-bad';
+                        const statusBadgeText = log.status;
+
+                        row.innerHTML = `
+                            <td>${log.sent_to}</td>
+                            <td>${log.subject}</td>
+                            <td><span class="badge ${statusBadgeClass}">${statusBadgeText}</span></td>
+                            <td>${formatDateForDisplay(log.sent_at)}</td>
+                        `;
+                    });
                 }
-
-                data.data.forEach(log => {
-                    const row = logsTableBody.insertRow();
-                    const statusBadgeClass = log.status === 'Success' ? 'b-ok' : 'b-bad';
-                    const statusBadgeText = log.status; // 'Success' or 'Failed'
-
-                    row.innerHTML = `
-                        <td>${log.sent_to}</td>
-                        <td>${log.subject}</td>
-                        <td><span class="badge ${statusBadgeClass}">${statusBadgeText}</span></td>
-                        <td>${formatDateForDisplay(log.sent_at)}</td>
-                    `;
-                });
             } else {
                 console.error('Failed to fetch email logs:', data.message);
             }
         } catch (error) {
-                console.error('Error fetching email logs:', error);
+            console.error('Error fetching email logs:', error);
         }
     }
 
@@ -175,41 +177,42 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.status === 'success') {
                 const successCount = data.data.Success || 0;
                 const failedCount = data.data.Failed || 0;
-                const chartData = [successCount, failedCount]; // Only Sent and Failed for this chart
+                const chartData = [successCount, failedCount];
 
-                // Destroy existing chart before re-creating for theme changes
                 if (statusDistributionChart) {
                     statusDistributionChart.destroy();
                 }
 
-                const ctx = $('#statusDistributionChart').getContext('2d');
-                statusDistributionChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Sent', 'Failed'], // Changed from Success, Failed, Pending to Sent, Failed
-                        datasets: [{
-                            data: chartData,
-                            backgroundColor: [colors.okColor, colors.badColor],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
+                const ctx = $('#statusDistributionChart'); // Get canvas element
+                if (ctx) { // Check if canvas element exists
+                    statusDistributionChart = new Chart(ctx.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Sent', 'Failed'],
+                            datasets: [{
+                                data: chartData,
+                                backgroundColor: [colors.okColor, colors.badColor],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
                             responsive: true,
                             maintainAspectRatio: false,
                             plugins: {
                                 legend: {
                                     position: 'bottom',
                                     labels: {
-                                        color: colors.textColor, // Dynamic text color for legend labels
+                                        color: colors.textColor,
                                         boxWidth: 12,
                                         padding: 20,
                                         font: { family: 'Inter', size: 12, weight: '500' }
                                     }
                                 }
                             },
-                            cutout: '65%', // Inner hole size
+                            cutout: '65%',
                         }
                     });
+                }
             }
         } catch (error) {
             console.error('Error fetching status distribution:', error);
@@ -228,50 +231,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const formattedLabels = dates.map(dateStr => new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short' }));
 
-                // Destroy existing chart before re-creating for theme changes
                 if (dailySendsChart) {
                     dailySendsChart.destroy();
                 }
 
-                const ctx = $('#dailySendsChart').getContext('2d');
-                dailySendsChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: formattedLabels,
-                        datasets: [{
-                            label: 'Emails Sent',
-                            data: counts,
-                            tension: 0.4, // Smooth curve
-                            fill: true,
-                            backgroundColor: colors.primaryWeak, // Dynamic fill color
-                            borderColor: colors.primaryColor, // Line color
-                            borderWidth: 2,
-                            pointRadius: 0 // No visible points on the line
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false } // No legend for this chart
+                const ctx = $('#dailySendsChart'); // Get canvas element
+                if (ctx) { // Check if canvas element exists
+                    dailySendsChart = new Chart(ctx.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: formattedLabels,
+                            datasets: [{
+                                label: 'Emails Sent',
+                                data: counts,
+                                tension: 0.4,
+                                fill: true,
+                                backgroundColor: colors.primaryWeak,
+                                borderColor: colors.primaryColor,
+                                borderWidth: 2,
+                                pointRadius: 0
+                            }]
                         },
-                        scales: {
-                            x: {
-                                grid: { display: false }, // No vertical grid lines
-                                ticks: { color: colors.textColor, font: { family: 'Inter', size: 11 } }
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
                             },
-                            y: {
-                                beginAtZero: true,
-                                grid: { color: colors.gridColor }, // Horizontal grid lines
-                                ticks: {
-                                    color: colors.textColor,
-                                    precision: 0, // Integer ticks for counts
-                                    font: { family: 'Inter', size: 11 }
+                            scales: {
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { color: colors.textColor, font: { family: 'Inter', size: 11 } }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: colors.gridColor },
+                                    ticks: {
+                                        color: colors.textColor,
+                                        precision: 0,
+                                        font: { family: 'Inter', size: 11 }
+                                    }
                                 }
                             }
                         }
-                    }
-                });
+                    });
+                }
             }
         } catch (error) {
             console.error('Error fetching daily sends data:', error);
@@ -281,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Event Listeners ---
 
-    // Sidebar navigation (using new classes .sidebar-nav a and data-section)
+    // Sidebar navigation
     $$('.sidebar-nav a').forEach(a => {
         a.addEventListener('click', e => {
             e.preventDefault();
@@ -292,7 +296,11 @@ document.addEventListener('DOMContentLoaded', () => {
             $$('main section.grid').forEach(section => {
                 section.style.display = 'none';
             });
-            $(`#section-${targetSectionId}`).style.display = 'grid';
+            const targetElement = $(`#section-${targetSectionId}`);
+            if (targetElement) { // Ensure element exists before trying to set display
+                targetElement.style.display = 'grid';
+            }
+
 
             if (targetSectionId === 'logs') {
                 updateEmailLogs(logDatePicker.value);
@@ -300,124 +308,138 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Create Campaign Button (Topbar) -> Opens modal for sending email
-    createCampaignBtn.addEventListener('click', () => {
-        sendEmailModal.style.display = 'flex'; // Show the modal
-    });
+    // Create Campaign Button (Topbar)
+    if (createCampaignBtn) { // Check if button exists
+        createCampaignBtn.addEventListener('click', () => {
+            if (sendEmailModal) sendEmailModal.style.display = 'flex';
+        });
+    }
+
 
     // Close Modal Button
-    modalCloseBtn.addEventListener('click', () => {
-        sendEmailModal.style.display = 'none';
-        modalSendMailForm.reset();
-        modalMailMessage.style.display = 'none';
-    });
+    if (modalCloseBtn) { // Check if button exists
+        modalCloseBtn.addEventListener('click', () => {
+            if (sendEmailModal) sendEmailModal.style.display = 'none';
+            if (modalSendMailForm) modalSendMailForm.reset();
+            if (modalMailMessage) modalMailMessage.style.display = 'none';
+        });
+    }
+
 
     // Theme Toggle
-    toggleThemeBtn.addEventListener('click', () => {
-        const root = document.body;
-        const currentTheme = root.dataset.theme;
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        root.dataset.theme = newTheme;
+    if (toggleThemeBtn) { // Check if button exists
+        toggleThemeBtn.addEventListener('click', () => {
+            const root = document.body;
+            const currentTheme = root.dataset.theme;
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            root.dataset.theme = newTheme;
 
-        // Update icon display
-        if (newTheme === 'dark') {
-            themeIconSun.style.display = 'none';
-            themeIconMoon.style.display = 'block';
-        } else {
-            themeIconSun.style.display = 'block';
-            themeIconMoon.style.display = 'none';
-        }
-        
-        updateAllCharts(); // Crucial: Re-render charts to apply new theme colors
-    });
+            // Update icon display
+            if (themeIconSun) themeIconSun.style.display = newTheme === 'light' ? 'block' : 'none';
+            if (themeIconMoon) themeIconMoon.style.display = newTheme === 'dark' ? 'block' : 'none';
+            
+            updateAllCharts(); // Crucial: Re-render charts to apply new theme colors
+        });
+    }
 
-    // Send Mail Form Submission (main form)
-    sendMailForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
 
-        const to = $('#to').value;
-        const subject = $('#subject').value;
-        const body = $('#body').value;
+    // Send Mail Form Submission (main form - check if it exists)
+    if (sendMailForm) {
+        sendMailForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-        const submitButton = e.target.querySelector('button[type="submit"]');
-        if (submitButton) submitButton.disabled = true;
+            const to = $('#to').value;
+            const subject = $('#subject').value;
+            const body = $('#body').value;
 
-        try {
-            const response = await fetch('/api/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ to, subject, body }),
-            });
-            const data = await response.json();
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
 
-            if (data.status === 'success') {
-                displayMessage(data.message, 'success', mainMailMessage);
-                e.target.reset(); // Clear form
-                updateAllDashboardData(); // Refresh all dashboard data
-            } else {
-                displayMessage(data.message, 'error', mainMailMessage);
+            try {
+                const response = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ to, subject, body }),
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayMessage(data.message, 'success', mainMailMessage);
+                    e.target.reset();
+                    updateAllDashboardData();
+                } else {
+                    displayMessage(data.message, 'error', mainMailMessage);
+                }
+            } catch (error) {
+                console.error('Error sending email:', error);
+                displayMessage('An unexpected error occurred. Please try again.', 'error', mainMailMessage);
+            } finally {
+                if (submitButton) submitButton.disabled = false;
             }
-        } catch (error) {
-            console.error('Error sending email:', error);
-            displayMessage('An unexpected error occurred. Please try again.', 'error', mainMailMessage);
-        } finally {
-            if (submitButton) submitButton.disabled = false;
-        }
-    });
+        });
+    }
 
-    // Send Mail Form Submission (modal form)
-    modalSendMailForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    // Send Mail Form Submission (modal form - check if it exists)
+    if (modalSendMailForm) {
+        modalSendMailForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-        const to = $('#modalTo').value;
-        const subject = $('#modalSubject').value;
-        const body = $('#modalBody').value;
+            const to = $('#modalTo').value;
+            const subject = $('#modalSubject').value;
+            const body = $('#modalBody').value;
 
-        const submitButton = e.target.querySelector('button[type="submit"]');
-        if (submitButton) submitButton.disabled = true;
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
 
-        try {
-            const response = await fetch('/api/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ to, subject, body }),
-            });
-            const data = await response.json();
+            try {
+                const response = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ to, subject, body }),
+                });
+                const data = await response.json();
 
-            if (data.status === 'success') {
-                displayMessage(data.message, 'success', modalMailMessage);
-                e.target.reset(); // Clear form
-                updateAllDashboardData(); // Refresh all dashboard data
-                setTimeout(() => { // Hide modal after successful send and message display
-                    sendEmailModal.style.display = 'none';
-                    modalMailMessage.style.display = 'none';
-                }, 2000); // 2 second delay before hiding modal
-            } else {
-                displayMessage(data.message, 'error', modalMailMessage);
+                if (data.status === 'success') {
+                    displayMessage(data.message, 'success', modalMailMessage);
+                    e.target.reset();
+                    updateAllDashboardData();
+                    setTimeout(() => {
+                        if (sendEmailModal) sendEmailModal.style.display = 'none';
+                        if (modalMailMessage) modalMailMessage.style.display = 'none';
+                    }, 2000);
+                } else {
+                    displayMessage(data.message, 'error', modalMailMessage);
+                }
+            } catch (error) {
+                console.error('Error sending email:', error);
+                displayMessage('An unexpected error occurred. Please try again.', 'error', modalMailMessage);
+            } finally {
+                if (submitButton) submitButton.disabled = false;
             }
-        } catch (error) {
-            console.error('Error sending email:', error);
-            displayMessage('An unexpected error occurred. Please try again.', 'error', modalMailMessage);
-        } finally {
-            if (submitButton) submitButton.disabled = false;
-        }
-    });
+        });
+    }
 
     // Log Date Picker Change
-    logDatePicker.addEventListener('change', () => {
-        const selectedDate = logDatePicker.value;
-        updateEmailLogs(selectedDate);
-    });
-
-    // Search functionality for logs (filters what's currently displayed)
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        const rows = [...logsTableBody.rows];
-        rows.forEach(r => {
-            const rowText = r.textContent.toLowerCase();
-            r.style.display = rowText.includes(query) ? '' : 'none';
+    if (logDatePicker) { // Check if element exists
+        logDatePicker.addEventListener('change', () => {
+            const selectedDate = logDatePicker.value;
+            updateEmailLogs(selectedDate);
         });
-    });
+    }
+
+    // Search functionality for logs
+    if (searchInput) { // Check if element exists
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            if (logsTableBody) { // Check if table body exists
+                const rows = [...logsTableBody.rows];
+                rows.forEach(r => {
+                    const rowText = r.textContent.toLowerCase();
+                    r.style.display = rowText.includes(query) ? '' : 'none';
+                });
+            }
+        });
+    }
 
     // ====== Initial Load & Refresh Logic ======
 
@@ -438,14 +460,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateAllDashboardData() {
         updateDailyLimit();
-        updateAllCharts(); // This will handle re-initialization and color updates
-        updateEmailLogs(getTodayISTDate()); // Load today's logs initially for the logs section
+        updateAllCharts();
+        
+        // Ensure logDatePicker has a value before calling updateEmailLogs
+        if (logDatePicker) {
+            updateEmailLogs(logDatePicker.value);
+        } else {
+            // Fallback for cases where logDatePicker might not be immediately available
+            updateEmailLogs(getTodayISTDate());
+        }
     }
 
     // Set today's date in the date picker and topbar date display
     const todayIST = getTodayISTDate();
-    logDatePicker.value = todayIST;
-    todayDateSpan.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    if (logDatePicker) logDatePicker.value = todayIST; // Safely set value
+    if (todayDateSpan) todayDateSpan.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); // Safely set text
+
+    // Set initial theme based on system preference or default to light
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (prefersDark) {
+        document.body.dataset.theme = 'dark';
+        if (themeIconSun) themeIconSun.style.display = 'none';
+        if (themeIconMoon) themeIconMoon.style.display = 'block';
+    } else {
+        document.body.dataset.theme = 'light';
+        if (themeIconSun) themeIconSun.style.display = 'block';
+        if (themeIconMoon) themeIconMoon.style.display = 'none';
+    }
+
 
     // Initial load of all dashboard data
     updateAllDashboardData();

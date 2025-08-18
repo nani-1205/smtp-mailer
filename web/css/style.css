@@ -112,10 +112,29 @@ body {
 .sidebar-stat-icon svg {
     width: 1.5rem;
     height: 1.5rem;
-    stroke: white; /* Ensure SVG stroke in icon is white */
+    stroke: white;
     stroke-width: 2;
-    fill: none; /* Make sure it's not filled */
+    fill: none; /* Explicitly set fill to none */
 }
+
+/* Specific overrides for sidebar nav SVG icons */
+.sidebar-nav a svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    stroke: var(--color-text-white); /* White stroke color */
+    stroke-width: 2;
+    fill: none !important; /* CRITICAL FIX: Ensure no fill */
+    /* Often helps with SVG rendering if there are scaling issues */
+    shape-rendering: geometricPrecision;
+    overflow: visible; /* Ensure nothing is clipped */
+}
+/* Specific overrides for brand logo SVG icon */
+.brand .logo svg {
+    fill: none !important; /* CRITICAL FIX: Ensure no fill for brand logo */
+    stroke: white;
+    stroke-width: 2;
+}
+
 .sidebar-stat.orange {
     background-color: var(--color-accent-orange);
 }
@@ -148,14 +167,7 @@ body {
 .sidebar-nav a:hover, .sidebar-nav a.active {
     background-color: rgba(255, 255, 255, 0.1);
 }
-.sidebar-nav a svg {
-    width: 1.25rem;
-    height: 1.25rem;
-    stroke: var(--color-text-white); /* Ensure SVG stroke in nav links is white */
-    stroke-width: 2;
-    fill: none !important; /* IMPORTANT: This is the critical fix for SVG fill issue */
-    shape-rendering: geometricPrecision; /* Often helps with SVG rendering */
-}
+
 /* Main Content */
 .main-content {
     flex-grow: 1;
@@ -360,6 +372,7 @@ body {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         justify-content: center; /* Center items on small screens */
+        align-items: center; /* Vertically align items in row layout */
     }
     .sidebar-stat {
         flex-shrink: 0;
@@ -370,6 +383,7 @@ body {
         -webkit-overflow-scrolling: touch;
         padding-top: 0.5rem; /* Space between stats and nav */
         padding-bottom: 0.5rem;
+        flex-wrap: nowrap; /* Prevent nav links from wrapping to keep them horizontal */
     }
     .sidebar-nav a {
         flex-shrink: 0; /* Prevent links from shrinking */
