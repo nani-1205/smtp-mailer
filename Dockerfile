@@ -28,8 +28,9 @@ FROM alpine:latest
 
 WORKDIR /app
 
-# Install ca-certificates and tzdata for runtime timezone support
-RUN apk add --no-cache ca-certificates tzdata
+# Install ca-certificates, tzdata, AND postgresql-client for runtime support.
+# postgresql-client is needed for the `pg_isready` healthcheck command.
+RUN apk add --no-cache ca-certificates tzdata postgresql-client
 
 # Set the timezone for the runtime container
 ENV TZ Asia/Kolkata
