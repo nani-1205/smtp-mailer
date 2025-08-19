@@ -18,29 +18,14 @@ services:
     restart: always
     ports:
       - "8080:8080"
-    # REMOVE THE ENTIRE ENVIRONMENT BLOCK BELOW
-    # environment:
-    #   # These variables will be loaded by the Go app from the .env file if it exists,
-    #   # otherwise, these can be set here or in a separate .env file.
-    #   # It's best practice to use a .env file for sensitive data and let Docker Compose load it.
-    #   # Uncomment and set these if you don't use a .env file loaded by compose or app.
-    #   # MAILHUB: smtp.gmail.com:587
-    #   # AUTHUSER: noreply@example.com
-    #   # AUTHPASS: your-generated-gmail-app-password
-    #   # FROMLINEOVERRIDE: YES
-    #   # USETLS: NO
-    #   # USESTARTTLS: YES
-    #   # DAILY_MAIL_LIMIT: 2000
-    #   # DATABASE_URL: postgres://user:password@db:5432/mailerdb?sslmode=disable
-    #   # PORT: 8080
-    # END OF BLOCK TO REMOVE
     env_file:
-      - .env # This tells Docker Compose to load environment variables from .env
+      - .env
     depends_on:
       - db
     # Ensure the database is ready before the app starts
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d mailerdb"]
+      # The '-h db' flag tells pg_isready which host to check inside the Docker network.
+      test: ["CMD-SHELL", "pg_isready -U user -d mailerdb -h db"]
       interval: 5s
       timeout: 5s
       retries: 5
