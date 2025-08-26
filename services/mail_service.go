@@ -4,9 +4,9 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"fmt"
-	"io" // ADDED: Needed for io.Copy to stream file content
+	"io"
 	"log"
-	"mime/multipart" // ADDED: Needed to handle file headers from the request
+	"mime/multipart"
 	"net/smtp"
 	"regexp"
 	"strconv"
@@ -15,7 +15,7 @@ import (
 
 	"smtp-mailer/config"
 
-	mail "gop.in/gomail.v2"
+	mail "gopkg.in/gomail.v2" // CORRECTED: gopkg.in, not gop.in
 )
 
 var stripTagsRegex = regexp.MustCompile("<[^>]*>")
@@ -83,18 +83,15 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	m.SetBody("text/html", body)
 
 	// --- ATTACHMENT HANDLING ---
-	// Iterate through the slice of file headers received from the handler.
 	for _, f := range files {
 		log.Printf("Attaching file: %s (Size: %d bytes)", f.Filename, f.Size)
 		
-		// Open the uploaded file.
 		file, err := f.Open()
 		if err != nil {
 			log.Printf("Error opening attachment %s: %v", f.Filename, err)
 			continue 
 		}
 
-		// Use SetCopyFunc for efficient streaming of the file content directly into the email message.
 		m.Attach(f.Filename, mail.SetCopyFunc(func(w io.Writer) error {
 			_, err := io.Copy(w, file)
 			return err
