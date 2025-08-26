@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
-	// "net/smtp" // REMOVED: This import is no longer needed
 	"regexp"
 	"strconv"
 	"strings"
@@ -18,7 +17,7 @@ import (
 	mail "gopkg.in/gomail.v2"
 )
 
-// Pre-compile the regular expression for efficiency. This will find and remove any HTML tag.
+// Pre-compile the regular expression for efficiency.
 var stripTagsRegex = regexp.MustCompile("<[^>]*>")
 
 // MailService handles sending emails and logging to DB
@@ -35,12 +34,12 @@ func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 	}
 }
 
-// SendEmailAndLog now accepts a slice of file headers for attachments.
+// SendEmailAndLog accepts a slice of file headers for attachments.
 func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string, files []*multipart.FileHeader) error {
 	status := "Failed"
 	var err error
 
-	// Log preview logic remains the same.
+	// Create a clean log preview.
 	plainTextBody := stripTagsRegex.ReplaceAllString(body, "")
 	bodyPreview := plainTextBody
 	if len(bodyPreview) > 200 {
@@ -57,7 +56,7 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 		}
 	}()
 
-	// SMTP connection logic remains the same.
+	// Parse SMTP server details.
 	parts := strings.Split(s.config.MailHub, ":")
 	if len(parts) != 2 {
 		err = fmt.Errorf("invalid MAILHUB format: %s. Expected host:port", s.config.MailHub)
@@ -83,7 +82,7 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/html", body)
 
-	// --- ATTACHMENT HANDLING ---
+	// Attach files.
 	for _, f := range files {
 		log.Printf("Attaching file: %s (Size: %d bytes)", f.Filename, f.Size)
 		
@@ -100,9 +99,8 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 		
 		file.Close()
 	}
-	// --- END ATTACHMENT HANDLING ---
 
-	// Set up dialer
+	// Set up dialer.
 	d := mail.NewDialer(host, port, s.config.AuthUser, s.config.AuthPass)
 	d.TLSConfig = &tls.Config{
 		ServerName:         host,
@@ -113,7 +111,7 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 		log.Println("WARNING: TLS certificate verification is DISABLED.")
 	}
 	
-	// Send the email
+	// Send the email.
 	if err = d.DialAndSend(m); err != nil {
 		status = "Failed"
 		return fmt.Errorf("could not send email: %w", err)
@@ -122,5 +120,3 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	status = "Success"
 	return nil
 }
-
-// REMOVED the unused sendEmailNoAuth function that was causing the import error.

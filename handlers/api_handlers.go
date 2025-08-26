@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
-	"mime/multipart" // Added for file handling
+	"mime/multipart" // This import is required to handle file uploads.
 	"net/http"
 	"strconv"
 	"time"
@@ -15,7 +15,7 @@ import (
 	"smtp-mailer/utils"
 )
 
-// SendMailRequest struct remains the same, as we'll unmarshal it from a form field.
+// SendMailRequest struct is used to unmarshal the JSON data part of the form.
 type SendMailRequest struct {
 	To      string   `json:"to"`
 	CC      []string `json:"cc,omitempty"`
@@ -24,11 +24,10 @@ type SendMailRequest struct {
 	Body    string   `json:"body"`
 }
 
-// SendMailHandler is updated to handle multipart/form-data for file uploads.
+// SendMailHandler handles multipart/form-data requests for sending emails with attachments.
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Set a max size for the form data to prevent abuse (e.g., 10MB total).
-		// 10 << 20 is 10 * 2^20, which equals 10MB.
+		// Set a max size for the entire request body to prevent abuse (e.g., 10MB).
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
 			errorResponse(w, "Unable to parse form data, file might be too large: "+err.Error(), http.StatusBadRequest)
 			return
@@ -54,7 +53,7 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 		
-		// 4. Check the daily mail limit (same logic as before).
+		// 4. Check the daily mail limit.
 		currentCount, err := utils.GetDailyMailCount(db)
 		if err != nil {
 			log.Printf("Error getting daily mail count: %v", err)
@@ -67,10 +66,10 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		}
 		
 		// 5. Get the files from the form.
-		// "attachments" is the name of our file input field in the HTML.
+		// The key "attachments" must match the name attribute of the <input type="file"> in the HTML.
 		files := r.MultipartForm.File["attachments"]
 
-		// 6. Send the email and log it, now passing the files to the service.
+		// 6. Call the email service with all the correct arguments.
 		emailService := services.NewMailService(cfg, db)
 		err = emailService.SendEmailAndLog(req.To, req.CC, req.BCC, req.Subject, req.Body, files)
 
@@ -85,7 +84,7 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	}
 }
 
-// GetLogsHandler retrieves a list of email logs.
+// GetLogsHandler retrieves a list of email logs, with optional date and limit filtering.
 func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		queryDateStr := r.URL.Query().Get("date")
