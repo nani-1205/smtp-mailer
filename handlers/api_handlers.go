@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
-	"mime/multipart" // This import is required to handle file uploads.
+	"mime/multipart" // This import IS required.
 	"net/http"
 	"strconv"
 	"time"
@@ -65,11 +65,10 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 		
-		// 5. Get the files from the form.
-		// The key "attachments" must match the name attribute of the <input type="file"> in the HTML.
+		// 5. Get the files from the form. This is where "mime/multipart" becomes necessary.
 		files := r.MultipartForm.File["attachments"]
 
-		// 6. Call the email service with all the correct arguments.
+		// 6. Call the email service with all the correct arguments, including files.
 		emailService := services.NewMailService(cfg, db)
 		err = emailService.SendEmailAndLog(req.To, req.CC, req.BCC, req.Subject, req.Body, files)
 

@@ -34,7 +34,7 @@ func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 	}
 }
 
-// SendEmailAndLog accepts a slice of file headers for attachments.
+// SendEmailAndLog function signature now correctly accepts the 'files' argument.
 func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string, files []*multipart.FileHeader) error {
 	status := "Failed"
 	var err error
