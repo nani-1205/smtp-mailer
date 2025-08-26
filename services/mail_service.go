@@ -6,15 +6,18 @@ import (
 	"fmt"
 	"log"
 	"net/smtp"
+	"regexp" // ADDED: Go's standard regular expression library
 	"strconv"
 	"strings"
 	"time"
 
 	"smtp-mailer/config"
 
-	"github.com/kennygrant/sanitize" // REPLACED bluemonday import with this
 	mail "gopkg.in/gomail.v2"
 )
+
+// Pre-compile the regular expression for efficiency. This will find and remove any HTML tag.
+var stripTagsRegex = regexp.MustCompile("<[^>]*>")
 
 // MailService handles sending emails and logging to DB
 type MailService struct {
@@ -35,15 +38,9 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	status := "Failed"
 	var err error
 
-	// --- LOGGING ENHANCEMENT using Sanitize ---
-	// Use sanitize.StripTags to get a clean, plain-text version of the body.
-	plainTextBody, err := sanitize.StripTags(body)
-	if err != nil {
-		// If stripping fails for some reason, just use the raw body for the preview
-		// This is a safe fallback.
-		plainTextBody = body
-		log.Printf("Warning: could not strip HTML tags from email body for logging: %v", err)
-	}
+	// --- LOGGING ENHANCEMENT using Regexp ---
+	// Use the pre-compiled regex to replace all HTML tags with an empty string.
+	plainTextBody := stripTagsRegex.ReplaceAllString(body, "")
 
 	// Truncate the PLAIN TEXT preview for the log.
 	bodyPreview := plainTextBody
@@ -112,7 +109,7 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	return nil
 }
 
-// sendEmailNoAuth function remains the same for illustrative purposes.
+// sendEmailNoAuth is an illustrative function not used by the main logic.
 func sendEmailNoAuth(host, port, from, to, subject, body string) error {
 	msg := []byte("To: " + to + "\r\n" +
 		"From: " + from + "\r\n" +
