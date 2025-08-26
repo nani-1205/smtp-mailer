@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarSentCount = $('#sidebarSentCount');
     const sidebarRemainingCount = $('#sidebarRemainingCount');
 
-    // Overview Section stat cards
+    // Overview Section stat cards (main content)
     const overviewSentCount = $('#overviewSentCount');
     const overviewRemainingCount = $('#overviewRemainingCount');
 
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getTodayISTDate() {
         const now = new Date();
-        const istOffset = 5.5 * 60; // IST is UTC+5:30 in minutes
+        const istOffset = 5.5 * 60;
         const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
         const istDate = new Date(utc + (istOffset * 60000));
         return istDate.toISOString().split('T')[0];
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function updateEmailLogs(date) {
         try {
-            let url = `/api/logs?date=${date}&limit=50`; // Always fetch up to 50 for a specific date
+            let url = `/api/logs?date=${date}&limit=50`;
 
             const response = await fetch(url);
             const data = await response.json();
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.status === 'success') {
                 const successCount = data.data.Success || 0;
                 const failedCount = data.data.Failed || 0;
-                const chartData = [successCount, failedCount, 0]; // Assume 0 pending for now
+                const chartData = [successCount, failedCount, 0]; // Assume 0 pending
 
                 if (statusDistributionChart) statusDistributionChart.destroy();
                 
@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const targetElement = $(`#section-${targetSectionId}`);
                 if (targetElement) {
-                    targetElement.style.display = 'grid';
+                    targetElement.style.display = 'grid'; // Use grid for layout consistency
                     targetElement.classList.add('active');
                 }
                 if (targetSectionId === 'logs') {
