@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"mime/multipart"
 	"regexp"
 	"strconv"
 	"strings"
