@@ -12,6 +12,7 @@ import (
 
 	"smtp-mailer/config"
 
+	"github.com/microcosm-cc/bluemonday" // ADDED for HTML stripping
 	mail "gopkg.in/gomail.v2"
 )
 
@@ -29,20 +30,26 @@ func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 	}
 }
 
-// SendEmailAndLog now accepts CC and BCC slices and adds them to the email.
+// SendEmailAndLog now sends emails as HTML and logs a plain text preview.
 func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string) error {
 	status := "Failed"
 	var err error
 
-	// Shorten body for preview in logs
-	bodyPreview := body
+	// --- LOGGING ENHANCEMENT ---
+	// Create a policy that strips all HTML tags for a clean log preview.
+	p := bluemonday.StripTagsPolicy()
+	plainTextBody := p.Sanitize(body)
+	
+	// Truncate the PLAIN TEXT preview for the log.
+	bodyPreview := plainTextBody
 	if len(bodyPreview) > 200 {
 		bodyPreview = bodyPreview[:200] + "..."
 	}
+	// --- END ENHANCEMENT ---
 
 	// Defer logging the email attempt
 	defer func() {
-		// The log entry only records the primary recipient for simplicity.
+		// The log entry uses the clean, plain-text preview.
 		_, dbErr := s.db.Exec(
 			"INSERT INTO email_logs (sent_to, subject, body_preview, status, sent_at) VALUES ($1, $2, $3, $4, $5)",
 			to, subject, bodyPreview, status, time.Now(),
@@ -69,17 +76,18 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	m := mail.NewMessage()
 	m.SetHeader("From", s.config.AuthUser)
 	m.SetHeader("To", to)
-
-	// Conditionally add CC and BCC headers if they are provided
 	if len(cc) > 0 {
-		m.SetHeader("Cc", cc...) // The '...' unpacks the slice into individual arguments
+		m.SetHeader("Cc", cc...)
 	}
 	if len(bcc) > 0 {
 		m.SetHeader("Bcc", bcc...)
 	}
-
 	m.SetHeader("Subject", subject)
-	m.SetBody("text/plain", body)
+
+	// --- CRITICAL CHANGE FOR HTML SUPPORT ---
+	// Set the body content type to "text/html" instead of "text/plain".
+	m.SetBody("text/html", body)
+	// --- END CRITICAL CHANGE ---
 
 	// Set up dialer
 	d := mail.NewDialer(host, port, s.config.AuthUser, s.config.AuthPass)
