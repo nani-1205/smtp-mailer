@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"database/sql"
-	// "encoding/json" // No longer needed in this file
+	"encoding/json"
 	"log"
-	// "mime/multipart" // REMOVED: This is no longer needed in the handler
+	"mime/multipart" // This import IS required here.
 	"net/http"
 	"strconv"
 	"time"
@@ -15,13 +15,45 @@ import (
 	"smtp-mailer/utils"
 )
 
-// The SendMailRequest struct is no longer needed here, as the parsing is now done in the service layer.
+// SendMailRequest struct is used to unmarshal the JSON data part of the form.
+type SendMailRequest struct {
+	To      string   `json:"to"`
+	CC      []string `json:"cc,omitempty"`
+	BCC     []string `json:"bcc,omitempty"`
+	Subject string   `json:"subject"`
+	Body    string   `json:"body"`
+}
 
-// SendMailHandler is now much simpler. It only checks the daily limit and then
-// passes the entire request object to the service for processing.
+// SendMailHandler handles multipart/form-data requests for sending emails with attachments.
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// 1. Check the daily mail limit first.
+		// Set a max size for the entire request body to prevent abuse (e.g., 10MB).
+		if err := r.ParseMultipartForm(10 << 20); err != nil {
+			errorResponse(w, "Unable to parse form data, file might be too large: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// 1. Get the email details from the "data" form field.
+		dataField := r.FormValue("data")
+		if dataField == "" {
+			errorResponse(w, "Missing 'data' field in multipart form.", http.StatusBadRequest)
+			return
+		}
+
+		// 2. Unmarshal the JSON data string into our struct.
+		var req SendMailRequest
+		if err := json.Unmarshal([]byte(dataField), &req); err != nil {
+			errorResponse(w, "Invalid JSON in 'data' field: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// 3. Validate the unmarshaled data.
+		if req.To == "" || req.Subject == "" || req.Body == "" {
+			errorResponse(w, "Fields 'to', 'subject', and 'body' are required in JSON data.", http.StatusBadRequest)
+			return
+		}
+		
+		// 4. Check the daily mail limit.
 		currentCount, err := utils.GetDailyMailCount(db)
 		if err != nil {
 			log.Printf("Error getting daily mail count: %v", err)
@@ -33,38 +65,36 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 		
-		// 2. Pass the entire request object (*http.Request) to the service layer.
-		// The service will handle parsing the multipart form, extracting data, and sending the email.
+		// 5. Get the files from the form. This is where "mime/multipart" becomes necessary.
+		files := r.MultipartForm.File["attachments"]
+
+		// 6. Call the email service with all the correct arguments, including files.
 		emailService := services.NewMailService(cfg, db)
-		err = emailService.SendEmailAndLog(r)
+		err = emailService.SendEmailAndLog(req.To, req.CC, req.BCC, req.Subject, req.Body, files)
 
 		if err != nil {
-			// The service now returns more detailed errors (e.g., from parsing).
-			// We log the detailed error and return a generic one to the user.
-			log.Printf("Error from email service: %v", err)
+			log.Printf("Error sending email to %s: %v", err, req.To)
 			errorResponse(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
-		// If the service returns no error, the email was sent and logged successfully.
-		// The service handles its own success logging.
+
+		log.Printf("Email sent successfully to %s with %d attachments.", req.To, len(files))
 		successResponse(w, "Email sent successfully", nil)
 	}
 }
+
+// --- Other handlers remain unchanged ---
 
 // GetLogsHandler remains the same.
 func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		queryDateStr := r.URL.Query().Get("date")
 		limitStr := r.URL.Query().Get("limit")
-
 		var query string
 		var args []interface{}
-
 		baseQuery := "SELECT id, sent_to, subject, body_preview, status, sent_at FROM email_logs"
 		orderBy := "ORDER BY sent_at DESC"
 		defaultLimit := 50
-
 		if queryDateStr != "" {
 			_, err := time.Parse("2006-01-02", queryDateStr)
 			if err != nil {
@@ -73,10 +103,8 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 			}
 			query = baseQuery + " WHERE (sent_at AT TIME ZONE 'Asia/Kolkata')::date = $1::date " + orderBy
 			args = append(args, queryDateStr)
-
 			if limitStr != "" {
-				parsedLimit, err := strconv.Atoi(limitStr)
-				if err == nil && parsedLimit > 0 {
+				if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
 					query += " LIMIT $" + strconv.Itoa(len(args)+1)
 					args = append(args, parsedLimit)
 				}
@@ -88,18 +116,15 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 			todayIST := time.Now().In(time.FixedZone("IST", 5*3600+30*60)).Format("2006-01-02")
 			query = baseQuery + " WHERE (sent_at AT TIME ZONE 'Asia/Kolkata')::date = $1::date " + orderBy
 			args = append(args, todayIST)
-
 			currentDayLimit := 5
 			if limitStr != "" {
-				parsedLimit, err := strconv.Atoi(limitStr)
-				if err == nil && parsedLimit > 0 {
+				if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
 					currentDayLimit = parsedLimit
 				}
 			}
 			query += " LIMIT $" + strconv.Itoa(len(args)+1)
 			args = append(args, currentDayLimit)
 		}
-
 		rows, err := db.Query(query, args...)
 		if err != nil {
 			log.Printf("Error querying email logs: %v", err)
@@ -107,7 +132,6 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		defer rows.Close()
-
 		var logs []database.EmailLog
 		for rows.Next() {
 			var logEntry database.EmailLog
@@ -117,7 +141,6 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 			}
 			logs = append(logs, logEntry)
 		}
-
 		if err = rows.Err(); err != nil {
 			log.Printf("Error iterating over email logs rows: %v", err)
 			errorResponse(w, "Internal server error fetching logs", http.StatusInternalServerError)
