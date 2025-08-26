@@ -8,182 +8,186 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="/css/style.css"> <!-- Link to external CSS -->
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body data-theme="light">
-  <div class="dashboard-wrapper">
-    <!-- Left Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-top">
-        <div class="brand">
-          <div class="logo-icon">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="m22 8-10 6L2 8"/></svg>
-          </div>
-          <h1>ASSET Mailer Pro</h1>
-        </div>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="m22 8-10 6L2 8"/></svg>
+      </div>
+      <h1>ASSET Mailer Pro</h1>
+    </div>
 
-        <div class="sidebar-stat-card primary-dark">
+    <div class="sidebar-stat-card primary-dark">
+      <div class="stat-icon-wrapper">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
+      </div>
+      <div>
+        <div class="stat-value" id="sidebarSentCount">0</div>
+        <div class="stat-label">Total emails sent</div>
+      </div>
+    </div>
+
+    <div class="sidebar-stat-card accent-orange">
+      <div class="stat-icon-wrapper">
+         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+      </div>
+      <div>
+        <div class="stat-value" id="sidebarRemainingCount">0</div>
+        <div class="stat-label">Remaining today</div>
+      </div>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <a class="nav-link active" href="#overview" data-section="overview">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 13l3-3 3 3 6-6"/></svg>
+        <span>Overview</span>
+      </a>
+      <a class="nav-link" href="#send" data-section="send">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
+        <span>Send Email</span>
+      </a>
+      <a class="nav-link" href="#logs" data-section="logs">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
+        <span>Logs</span>
+      </a>
+      <a class="nav-link" href="#limit" data-section="limit">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></svg>
+        <span>Daily Limit</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">© 2025 ASSET Mailer Pro</div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="main-content-area">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2 class="dashboard-title">Dashboard</h2>
+        <span class="current-date" id="todayDate"></span>
+      </div>
+      <div class="topbar-right">
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="search" placeholder="Search logs, recipients, subjects…"/>
+        </div>
+        <button id="toggleTheme" class="icon-btn" title="Toggle theme">
+            <svg id="theme-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            <svg id="theme-icon-moon" style="display:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </button>
+        <button class="primary-btn" id="createCampaignBtn">Create Campaign</button>
+      </div>
+    </div>
+
+    <!-- Main Content Sections -->
+    <div class="main-content-sections">
+      <!-- Overview Section -->
+      <section id="section-overview" class="dashboard-grid active">
+        <!-- Stat Cards -->
+        <div class="card stat-card">
           <div class="stat-icon-wrapper">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
           </div>
-          <div>
-            <div class="stat-value" id="sidebarSentCount">0</div>
-            <div class="stat-label">Total emails sent</div>
+          <div class="stat-details">
+            <div class="stat-value" id="overviewSentCount">0</div>
+            <div class="stat-label">Sent Today</div>
           </div>
         </div>
-
-        <div class="sidebar-stat-card accent-orange">
+        <div class="card stat-card">
           <div class="stat-icon-wrapper">
              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
           </div>
-          <div>
-            <div class="stat-value" id="sidebarRemainingCount">0</div>
-            <div class="stat-label">Remaining today</div>
+          <div class="stat-details">
+            <div class="stat-value" id="overviewRemainingCount">0</div>
+            <div class="stat-label">Remaining Today</div>
           </div>
         </div>
-      </div>
-
-      <nav class="sidebar-nav">
-        <a class="nav-link active" href="#overview" data-section="overview">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 13l3-3 3 3 6-6"/></svg>
-          <span>Overview</span>
-        </a>
-        <a class="nav-link" href="#send" data-section="send">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
-          <span>Send Email</span>
-        </a>
-        <a class="nav-link" href="#logs" data-section="logs">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
-          <span>Logs</span>
-        </a>
-        <a class="nav-link" href="#limit" data-section="limit">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></svg>
-          <span>Daily Limit</span>
-        </a>
-      </nav>
-      <div class="sidebar-footer">© 2025 ASSET Mailer Pro</div>
-    </aside>
-
-    <!-- Main Content Area -->
-    <main class="main-content-area">
-      <!-- Topbar -->
-      <div class="topbar">
-        <div class="topbar-left">
-          <h2 class="dashboard-title">Dashboard</h2>
-          <span class="current-date" id="todayDate"></span>
+        <!-- Daily Sends Chart -->
+        <div class="card chart-card-lg">
+          <div class="card-header"><h2>Daily Sends (Last 7 Days)</h2></div>
+          <div class="chart-container">
+            <canvas id="dailySendsChart"></canvas>
+          </div>
         </div>
-        <div class="topbar-right">
-          <div class="search-box">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-            <input id="search" placeholder="Search logs, recipients, subjects…"/>
+        <!-- Email Status Distribution Chart -->
+        <div class="card chart-card-lg">
+          <div class="card-header"><h2>Email Status Distribution</h2></div>
+          <div class="chart-container">
+            <canvas id="statusDistributionChart"></canvas>
           </div>
-          <button id="toggleTheme" class="icon-btn" title="Toggle theme">
-              <svg id="theme-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-              <svg id="theme-icon-moon" style="display:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-          </button>
-          <button class="primary-btn" id="createCampaignBtn">Create Campaign</button>
         </div>
-      </div>
+      </section>
 
-      <!-- Main Content Sections (Dynamically displayed by JS) -->
-      <div class="main-content-sections">
-        <!-- Overview Section -->
-        <section id="section-overview" class="dashboard-grid active">
-          <!-- Stat Cards -->
-          <div class="card stat-card">
-            <div class="stat-icon-wrapper">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
+      <!-- Send Email Section -->
+      <section id="section-send" class="content-section" style="display:none;">
+        <div class="card full-width">
+          <div class="card-header"><h2>Compose Email</h2></div>
+          <form id="sendMailForm">
+            <div class="form-group">
+                <label for="to">Recipient Email</label>
+                <input type="email" id="to" name="to" required placeholder="user@example.com"/>
             </div>
-            <div class="stat-details">
-              <div class="stat-value" id="overviewSentCount">0</div>
-              <div class="stat-label">Sent Today</div>
+            <div class="form-group">
+                <label for="cc">CC (optional, comma-separated)</label>
+                <input type="text" id="cc" name="cc" placeholder="cc1@example.com, cc2@example.com"/>
             </div>
-          </div>
-          <div class="card stat-card">
-            <div class="stat-icon-wrapper">
-               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+            <div class="form-group">
+                <label for="bcc">BCC (optional, comma-separated)</label>
+                <input type="text" id="bcc" name="bcc" placeholder="bcc1@example.com, bcc2@example.com"/>
             </div>
-            <div class="stat-details">
-              <div class="stat-value" id="overviewRemainingCount">0</div>
-              <div class="stat-label">Remaining Today</div>
+            <div class="form-group">
+                <label for="subject">Subject</label>
+                <input type="text" id="subject" name="subject" required placeholder="Welcome to ASSET Mailer Pro"/>
             </div>
-          </div>
-          <!-- Daily Sends Chart -->
-          <div class="card chart-card-lg">
-            <div class="card-header"><h2>Daily Sends (Last 7 Days)</h2></div>
-            <div class="chart-container">
-              <canvas id="dailySendsChart"></canvas>
+            <div class="form-group">
+                <label for="body">Body</label>
+                <textarea id="body" name="body" rows="8" required placeholder="Write your message here…"></textarea>
             </div>
-          </div>
-          <!-- Email Status Distribution Chart -->
-          <div class="card chart-card-lg">
-            <div class="card-header"><h2>Email Status Distribution</h2></div>
-            <div class="chart-container">
-              <canvas id="statusDistributionChart"></canvas>
+            <div class="form-actions">
+              <button type="reset" class="secondary-btn">Reset</button>
+              <button type="submit" class="primary-btn">Send Email</button>
             </div>
-          </div>
-        </section>
+          </form>
+          <div id="mailMessage" class="message-area" style="display: none;"></div>
+        </div>
+      </section>
 
-        <!-- Send Email Section -->
-        <section id="section-send" class="content-section" style="display:none;">
-          <div class="card full-width">
-            <div class="card-header"><h2>Compose Email</h2></div>
-            <form id="sendMailForm">
-              <div class="form-group">
-                  <label for="to">Recipient Email</label>
-                  <input type="email" id="to" name="to" required placeholder="user@example.com"/>
-              </div>
-              <div class="form-group">
-                  <label for="subject">Subject</label>
-                  <input type="text" id="subject" name="subject" required placeholder="Welcome to ASSET Mailer Pro"/>
-              </div>
-              <div class="form-group">
-                  <label for="body">Message Body</label>
-                  <textarea id="body" name="body" rows="8" required placeholder="Write your message here…"></textarea>
-              </div>
-              <div class="form-actions">
-                <button type="reset" class="secondary-btn">Reset</button>
-                <button type="submit" class="primary-btn">Send Email</button>
-              </div>
-            </form>
-            <div id="mailMessage" class="message-area" style="display: none;"></div>
+      <!-- Logs Section -->
+      <section id="section-logs" class="content-section" style="display:none;">
+        <div class="card full-width">
+          <div class="card-header">
+            <h2>Email Logs</h2>
+            <input type="date" id="logDate" class="form-input date-input">
           </div>
-        </section>
+          <div class="table-responsive">
+            <table class="table" id="logsTable">
+              <thead><tr><th>Recipient</th><th>Subject</th><th>Result</th><th>Date</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
-        <!-- Logs Section -->
-        <section id="section-logs" class="content-section" style="display:none;">
-          <div class="card full-width">
-            <div class="card-header">
-              <h2>Email Logs</h2>
-              <input type="date" id="logDate" class="form-input date-input">
-            </div>
-            <div class="table-responsive">
-              <table class="table" id="logsTable">
-                <thead><tr><th>Recipient</th><th>Subject</th><th>Result</th><th>Date</th></tr></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- Daily Limit Section -->
-        <section id="section-limit" class="content-section" style="display:none;">
-          <div class="card full-width">
-            <div class="card-header"><h2>Daily Mail Limit</h2></div>
-            <div class="limit-details">
-              <div class="limit-bar-wrapper">
-                <div class="progress-container">
-                  <div id="limitBar"></div>
-                </div>
-                <strong id="limitText">0 / 0</strong>
+      <!-- Daily Limit Section -->
+      <section id="section-limit" class="content-section" style="display:none;">
+        <div class="card full-width">
+          <div class="card-header"><h2>Daily Mail Limit</h2></div>
+          <div class="limit-details">
+            <div class="limit-bar-wrapper">
+              <div class="progress-container">
+                <div id="limitBar"></div>
               </div>
-              <small class="muted-text">Mail sending will pause automatically after reaching your daily limit within 24 hours.</small>
+              <strong id="limitText">0 / 0</strong>
             </div>
+            <small class="muted-text">Mail sending will pause automatically after reaching your daily limit within 24 hours.</small>
           </div>
-        </section>
-      </div>
-    </main>
-  </div>
+        </div>
+      </section>
+    </div>
+  </main>
 
   <!-- Modal for sending an email -->
   <div id="sendEmailModal" class="modal-overlay">
@@ -198,11 +202,19 @@
                   <input type="email" id="modalTo" name="to" required placeholder="user@example.com"/>
               </div>
               <div class="form-group">
+                  <label for="modalCc">CC (optional, comma-separated)</label>
+                  <input type="text" id="modalCc" name="cc" placeholder="cc1@example.com, cc2@example.com"/>
+              </div>
+              <div class="form-group">
+                  <label for="modalBcc">BCC (optional, comma-separated)</label>
+                  <input type="text" id="modalBcc" name="bcc" placeholder="bcc1@example.com, bcc2@example.com"/>
+              </div>
+              <div class="form-group">
                   <label for="modalSubject">Subject</label>
                   <input type="text" id="modalSubject" name="subject" required placeholder="Welcome to ASSET Mailer Pro"/>
               </div>
               <div class="form-group">
-                  <label for="modalBody">Message Body</label>
+                  <label for="modalBody">Body</label>
                   <textarea id="modalBody" name="body" rows="8" required placeholder="Write your message here…"></textarea>
               </div>
               <div class="form-actions">

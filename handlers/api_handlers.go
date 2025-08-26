@@ -12,18 +12,19 @@ import (
 	"smtp-mailer/database"
 	"smtp-mailer/services"
 	"smtp-mailer/utils"
-
-	// "github.com/gorilla/mux" // <-- REMOVED THIS LINE: It's no longer used in this file
 )
 
-// SendMailRequest struct for parsing incoming JSON request
+// SendMailRequest struct now includes CC and BCC fields.
+// omitempty is used so they are optional in the JSON payload.
 type SendMailRequest struct {
-	To      string `json:"to"`
-	Subject string `json:"subject"`
-	Body    string `json:"body"`
+	To      string   `json:"to"`
+	CC      []string `json:"cc,omitempty"`
+	BCC     []string `json:"bcc,omitempty"`
+	Subject string   `json:"subject"`
+	Body    string   `json:"body"`
 }
 
-// SendMailHandler handles the API request to send an email
+// SendMailHandler handles the API request to send an email.
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -55,9 +56,9 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		// Send the email and log it
+		// Send the email and log it, now passing CC and BCC to the service.
 		emailService := services.NewMailService(cfg, db)
-		err = emailService.SendEmailAndLog(req.To, req.Subject, req.Body)
+		err = emailService.SendEmailAndLog(req.To, req.CC, req.BCC, req.Subject, req.Body)
 
 		if err != nil {
 			log.Printf("Error sending email to %s: %v", req.To, err)
@@ -71,9 +72,6 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 }
 
 // GetLogsHandler retrieves a list of email logs, with optional date and limit filtering.
-// Query parameters:
-// - date: YYYY-MM-DD (e.g., ?date=2025-08-14). If omitted, defaults to current IST date.
-// - limit: int (e.g., ?limit=5). If omitted, defaults to 50, or a specified value if date is provided.
 func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		queryDateStr := r.URL.Query().Get("date")
@@ -87,8 +85,6 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 		defaultLimit := 50 // Default for historical logs
 
 		if queryDateStr != "" {
-			// Specific date requested
-			// Ensure date is in YYYY-MM-DD format for parsing
 			_, err := time.Parse("2006-01-02", queryDateStr)
 			if err != nil {
 				errorResponse(w, "Invalid date format. Use YYYY-MM-DD.", http.StatusBadRequest)
@@ -110,14 +106,11 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 				query += " LIMIT $" + strconv.Itoa(len(args)+1)
 				args = append(args, defaultLimit)
 			}
-
 		} else {
-			// No specific date, default to current IST date and specific limit (e.g., top 5)
-			todayIST := time.Now().In(time.FixedZone("IST", 5*3600+30*60)).Format("2006-01-02") // IST today
+			todayIST := time.Now().In(time.FixedZone("IST", 5*3600+30*60)).Format("2006-01-02")
 			query = baseQuery + " WHERE (sent_at AT TIME ZONE 'Asia/Kolkata')::date = $1::date " + orderBy
 			args = append(args, todayIST)
 
-			// Default limit for current day is 5, can be overridden by query param
 			currentDayLimit := 5
 			if limitStr != "" {
 				parsedLimit, err := strconv.Atoi(limitStr)
@@ -157,7 +150,7 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GetDailyLimitHandler retrieves the current daily mail count and limit
+// GetDailyLimitHandler retrieves the current daily mail count and limit.
 func GetDailyLimitHandler(db *sql.DB, dailyLimit int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		currentCount, err := utils.GetDailyMailCount(db)
@@ -176,7 +169,7 @@ func GetDailyLimitHandler(db *sql.DB, dailyLimit int) http.HandlerFunc {
 	}
 }
 
-// GetEmailStatsHandler retrieves the distribution of email statuses (success/failed) for the current IST day.
+// GetEmailStatsHandler retrieves the distribution of email statuses for the current IST day.
 func GetEmailStatsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		statusCounts, err := utils.GetEmailStatusDistribution(db)
@@ -190,12 +183,10 @@ func GetEmailStatsHandler(db *sql.DB) http.HandlerFunc {
 }
 
 // GetDailySendsHandler retrieves the number of emails sent per day for the last X days.
-// Query parameter:
-// - days: int (e.g., ?days=7). If omitted, defaults to 7.
 func GetDailySendsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		daysStr := r.URL.Query().Get("days")
-		days := 7 // Default to last 7 days
+		days := 7 // Default
 
 		if daysStr != "" {
 			parsedDays, err := strconv.Atoi(daysStr)
