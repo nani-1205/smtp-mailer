@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
+	// "encoding/json" // No longer needed in this file
 	"log"
-	"mime/multipart" // This import IS required.
+	// "mime/multipart" // REMOVED: This is no longer needed in the handler
 	"net/http"
 	"strconv"
 	"time"
@@ -15,45 +15,13 @@ import (
 	"smtp-mailer/utils"
 )
 
-// SendMailRequest struct is used to unmarshal the JSON data part of the form.
-type SendMailRequest struct {
-	To      string   `json:"to"`
-	CC      []string `json:"cc,omitempty"`
-	BCC     []string `json:"bcc,omitempty"`
-	Subject string   `json:"subject"`
-	Body    string   `json:"body"`
-}
+// The SendMailRequest struct is no longer needed here, as the parsing is now done in the service layer.
 
-// SendMailHandler handles multipart/form-data requests for sending emails with attachments.
+// SendMailHandler is now much simpler. It only checks the daily limit and then
+// passes the entire request object to the service for processing.
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Set a max size for the entire request body to prevent abuse (e.g., 10MB).
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
-			errorResponse(w, "Unable to parse form data, file might be too large: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		// 1. Get the email details from the "data" form field.
-		dataField := r.FormValue("data")
-		if dataField == "" {
-			errorResponse(w, "Missing 'data' field in multipart form.", http.StatusBadRequest)
-			return
-		}
-
-		// 2. Unmarshal the JSON data string into our struct.
-		var req SendMailRequest
-		if err := json.Unmarshal([]byte(dataField), &req); err != nil {
-			errorResponse(w, "Invalid JSON in 'data' field: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		// 3. Validate the unmarshaled data.
-		if req.To == "" || req.Subject == "" || req.Body == "" {
-			errorResponse(w, "Fields 'to', 'subject', and 'body' are required in JSON data.", http.StatusBadRequest)
-			return
-		}
-		
-		// 4. Check the daily mail limit.
+		// 1. Check the daily mail limit first.
 		currentCount, err := utils.GetDailyMailCount(db)
 		if err != nil {
 			log.Printf("Error getting daily mail count: %v", err)
@@ -65,25 +33,26 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 		
-		// 5. Get the files from the form. This is where "mime/multipart" becomes necessary.
-		files := r.MultipartForm.File["attachments"]
-
-		// 6. Call the email service with all the correct arguments, including files.
+		// 2. Pass the entire request object (*http.Request) to the service layer.
+		// The service will handle parsing the multipart form, extracting data, and sending the email.
 		emailService := services.NewMailService(cfg, db)
-		err = emailService.SendEmailAndLog(req.To, req.CC, req.BCC, req.Subject, req.Body, files)
+		err = emailService.SendEmailAndLog(r)
 
 		if err != nil {
-			log.Printf("Error sending email to %s: %v", req.To, err)
+			// The service now returns more detailed errors (e.g., from parsing).
+			// We log the detailed error and return a generic one to the user.
+			log.Printf("Error from email service: %v", err)
 			errorResponse(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		log.Printf("Email sent successfully to %s with %d attachments.", req.To, len(files))
+		
+		// If the service returns no error, the email was sent and logged successfully.
+		// The service handles its own success logging.
 		successResponse(w, "Email sent successfully", nil)
 	}
 }
 
-// GetLogsHandler retrieves a list of email logs, with optional date and limit filtering.
+// GetLogsHandler remains the same.
 func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		queryDateStr := r.URL.Query().Get("date")
