@@ -8,13 +8,11 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.1.1
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
-	github.com/microcosm-cc/bluemonday v1.0.26 // ADDED for HTML stripping
+	github.com/kennygrant/sanitize v1.2.4 // REPLACED bluemonday with this
 )
 
 require (
-	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
-	golang.org.x/net v0.7.0 // indirect
 )

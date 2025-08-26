@@ -12,7 +12,7 @@ import (
 
 	"smtp-mailer/config"
 
-	"github.com/microcosm-cc/bluemonday" // ADDED for HTML stripping
+	"github.com/kennygrant/sanitize" // REPLACED bluemonday import with this
 	mail "gopkg.in/gomail.v2"
 )
 
@@ -30,16 +30,21 @@ func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 	}
 }
 
-// SendEmailAndLog now sends emails as HTML and logs a plain text preview.
+// SendEmailAndLog sends emails as HTML and logs a plain text preview.
 func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string) error {
 	status := "Failed"
 	var err error
 
-	// --- LOGGING ENHANCEMENT ---
-	// Create a policy that strips all HTML tags for a clean log preview.
-	p := bluemonday.StripTagsPolicy()
-	plainTextBody := p.Sanitize(body)
-	
+	// --- LOGGING ENHANCEMENT using Sanitize ---
+	// Use sanitize.StripTags to get a clean, plain-text version of the body.
+	plainTextBody, err := sanitize.StripTags(body)
+	if err != nil {
+		// If stripping fails for some reason, just use the raw body for the preview
+		// This is a safe fallback.
+		plainTextBody = body
+		log.Printf("Warning: could not strip HTML tags from email body for logging: %v", err)
+	}
+
 	// Truncate the PLAIN TEXT preview for the log.
 	bodyPreview := plainTextBody
 	if len(bodyPreview) > 200 {
@@ -49,7 +54,6 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 
 	// Defer logging the email attempt
 	defer func() {
-		// The log entry uses the clean, plain-text preview.
 		_, dbErr := s.db.Exec(
 			"INSERT INTO email_logs (sent_to, subject, body_preview, status, sent_at) VALUES ($1, $2, $3, $4, $5)",
 			to, subject, bodyPreview, status, time.Now(),
@@ -84,10 +88,8 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	}
 	m.SetHeader("Subject", subject)
 
-	// --- CRITICAL CHANGE FOR HTML SUPPORT ---
-	// Set the body content type to "text/html" instead of "text/plain".
+	// Set the body content type to "text/html" to support HTML emails.
 	m.SetBody("text/html", body)
-	// --- END CRITICAL CHANGE ---
 
 	// Set up dialer
 	d := mail.NewDialer(host, port, s.config.AuthUser, s.config.AuthPass)
