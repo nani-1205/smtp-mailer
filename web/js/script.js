@@ -44,13 +44,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Utility Functions ---
     function displayMessage(message, type, targetElement) {
-        if (!targetElement) return;
+        if (!targetElement) {
+            console.warn(`Attempted to display message, but target element not found for type: ${type}`);
+            return;
+        }
         targetElement.textContent = message;
         targetElement.className = `message-area ${type}`;
         targetElement.style.display = 'block';
         setTimeout(() => {
             targetElement.style.display = 'none';
-        }, 4000);
+        }, 5000);
     }
 
     function formatDateForDisplay(dateString) {
@@ -60,23 +63,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getTodayISTDate() {
         const now = new Date();
-        const istOffset = 5.5 * 60; // IST is UTC+5:30 in minutes
+        const istOffset = 5.5 * 60;
         const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
         const istDate = new Date(utc + (istOffset * 60000));
         return istDate.toISOString().split('T')[0];
     }
     
-    // New helper function to parse comma-separated emails into an array
     function parseEmailList(emailString) {
         if (!emailString || emailString.trim() === "") {
-            return []; // Return empty array if input is empty or just whitespace
+            return [];
         }
         return emailString.split(',')
                           .map(email => email.trim())
-                          .filter(email => email !== ""); // Filter out empty strings from entries like "a@b.com,,"
+                          .filter(email => email !== "");
     }
 
-    // --- Chart Styling Helpers ---
     function getChartColors() {
         const style = getComputedStyle(document.body);
         return {
@@ -116,8 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         limitProgressBar.style.background = 'linear-gradient(90deg, var(--color-primary-dark), var(--color-primary-light))';
                     }
                 }
-            } else {
-                console.error('Failed to fetch daily limit:', data.message);
             }
         } catch (error) {
             console.error('Error fetching daily limit:', error);
@@ -161,8 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
                     });
                 }
-            } else {
-                console.error('Failed to fetch email logs:', data.message);
             }
         } catch (error) {
             console.error('Error fetching email logs:', error);
@@ -178,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.status === 'success') {
                 const successCount = data.data.Success || 0;
                 const failedCount = data.data.Failed || 0;
-                const chartData = [successCount, failedCount, 0]; // Assume 0 pending
+                const chartData = [successCount, failedCount, 0];
 
                 if (statusDistributionChart) {
                     statusDistributionChart.destroy();
@@ -281,6 +278,69 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error fetching daily sends data:', error);
         }
     }
+    
+    // --- NEW: Centralized Form Submission Logic for FormData ---
+    async function handleFormSubmit(formElement, messageElement) {
+        // Find all input elements within the form
+        const toInput = formElement.querySelector('[name="to"]');
+        const ccInput = formElement.querySelector('[name="cc"]');
+        const bccInput = formElement.querySelector('[name="bcc"]');
+        const subjectInput = formElement.querySelector('[name="subject"]');
+        const bodyInput = formElement.querySelector('[name="body"]');
+        const attachmentsInput = formElement.querySelector('[name="attachments"]');
+        const submitButton = formElement.querySelector('button[type="submit"]');
+
+        const formData = new FormData();
+
+        // 1. Create a JSON object with the email text data
+        const emailData = {
+            to: toInput.value,
+            cc: parseEmailList(ccInput ? ccInput.value : ''),
+            bcc: parseEmailList(bccInput ? bccInput.value : ''),
+            subject: subjectInput.value,
+            body: bodyInput.value
+        };
+
+        // 2. Append the JSON data as a single string field named "data"
+        formData.append('data', JSON.stringify(emailData));
+
+        // 3. Append each selected file to the FormData object
+        if (attachmentsInput && attachmentsInput.files.length > 0) {
+            for (const file of attachmentsInput.files) {
+                formData.append('attachments', file);
+            }
+        }
+
+        if (submitButton) submitButton.disabled = true;
+
+        try {
+            const response = await fetch('/api/send', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                displayMessage(data.message, 'success', messageElement);
+                formElement.reset();
+                updateAllDashboardData();
+
+                if (formElement.id === 'modalSendMailForm') {
+                    setTimeout(() => {
+                        if (sendEmailModal) sendEmailModal.style.display = 'none';
+                        if (modalMailMessage) modalMailMessage.style.display = 'none';
+                    }, 2000);
+                }
+            } else {
+                displayMessage(data.message, 'error', messageElement);
+            }
+        } catch (error) {
+            console.error('Error sending email:', error);
+            displayMessage('An unexpected error occurred. Please try again.', 'error', messageElement);
+        } finally {
+            if (submitButton) submitButton.disabled = false;
+        }
+    }
 
 
     // --- Event Listeners ---
@@ -292,13 +352,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 a.classList.add('active');
 
                 const targetSectionId = a.dataset.section;
-                $$('section.content-section, section.dashboard-grid').forEach(section => {
+                $$('.main-content-sections > section').forEach(section => {
                     section.style.display = 'none';
                     section.classList.remove('active');
                 });
                 const targetElement = $(`#section-${targetSectionId}`);
                 if (targetElement) {
-                    targetElement.style.display = 'grid';
+                    targetElement.style.display = 'grid'; // Use grid for active sections
                     targetElement.classList.add('active');
                 }
 
@@ -338,80 +398,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (sendMailForm) {
-        sendMailForm.addEventListener('submit', async (e) => {
+        sendMailForm.addEventListener('submit', (e) => {
             e.preventDefault();
-
-            const to = $('#to').value;
-            const cc = parseEmailList($('#cc').value); // Parse CC
-            const bcc = parseEmailList($('#bcc').value); // Parse BCC
-            const subject = $('#subject').value;
-            const body = $('#body').value;
-
-            const submitButton = e.target.querySelector('button[type="submit"]');
-            if (submitButton) submitButton.disabled = true;
-
-            try {
-                const response = await fetch('/api/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ to, cc, bcc, subject, body }),
-                });
-                const data = await response.json();
-
-                if (data.status === 'success') {
-                    displayMessage(data.message, 'success', mainMailMessage);
-                    e.target.reset();
-                    updateAllDashboardData();
-                } else {
-                    displayMessage(data.message, 'error', mainMailMessage);
-                }
-            } catch (error) {
-                console.error('Error sending email:', error);
-                displayMessage('An unexpected error occurred. Please try again.', 'error', mainMailMessage);
-            } finally {
-                if (submitButton) submitButton.disabled = false;
-            }
+            handleFormSubmit(sendMailForm, mainMailMessage);
         });
     }
 
     if (modalSendMailForm) {
-        modalSendMailForm.addEventListener('submit', async (e) => {
+        modalSendMailForm.addEventListener('submit', (e) => {
             e.preventDefault();
-
-            const to = $('#modalTo').value;
-            const cc = parseEmailList($('#modalCc').value); // Parse Modal CC
-            const bcc = parseEmailList($('#modalBcc').value); // Parse Modal BCC
-            const subject = $('#modalSubject').value;
-            const body = $('#modalBody').value;
-
-            const submitButton = e.target.querySelector('button[type="submit"]');
-            if (submitButton) submitButton.disabled = true;
-
-            try {
-                const response = await fetch('/api/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ to, cc, bcc, subject, body }),
-                });
-                const data = await response.json();
-
-                if (data.status === 'success') {
-                    displayMessage(data.message, 'success', modalMailMessage);
-                    e.target.reset();
-                    updateAllDashboardData();
-                    setTimeout(() => {
-                        if (sendEmailModal) sendEmailModal.style.display = 'none';
-                        if (modalMailMessage) modalMailMessage.style.display = 'none';
-                    }, 2000);
-                } else {
-                    displayMessage(data.message, 'error', modalMailMessage);
-                }
-            } catch (error) {
-                console.error('Error sending email:', error);
-                displayMessage('An unexpected error occurred. Please try again.', 'error', modalMailMessage);
-            } finally {
-                if (submitButton) submitButton.disabled = false;
-            }
+            handleFormSubmit(modalSendMailForm, modalMailMessage);
         });
     }
 
