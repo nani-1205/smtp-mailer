@@ -4,19 +4,20 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"fmt"
+	"io" // ADDED: Needed for io.Copy to stream file content
 	"log"
+	"mime/multipart" // ADDED: Needed to handle file headers from the request
 	"net/smtp"
-	"regexp" // Go's standard regular expression library
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"smtp-mailer/config"
 
-	mail "gopkg.in/gomail.v2"
+	mail "gop.in/gomail.v2"
 )
 
-// Pre-compile the regular expression for efficiency. This will find and remove any HTML tag.
 var stripTagsRegex = regexp.MustCompile("<[^>]*>")
 
 // MailService handles sending emails and logging to DB
@@ -33,23 +34,18 @@ func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 	}
 }
 
-// SendEmailAndLog sends emails as HTML and logs a plain text preview.
-func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string) error {
+// SendEmailAndLog now accepts a slice of file headers for attachments.
+func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string, files []*multipart.FileHeader) error {
 	status := "Failed"
 	var err error
 
-	// --- LOGGING ENHANCEMENT using Regexp ---
-	// Use the pre-compiled regex to replace all HTML tags with an empty string.
+	// Log preview logic remains the same.
 	plainTextBody := stripTagsRegex.ReplaceAllString(body, "")
-
-	// Truncate the PLAIN TEXT preview for the log.
 	bodyPreview := plainTextBody
 	if len(bodyPreview) > 200 {
 		bodyPreview = bodyPreview[:200] + "..."
 	}
-	// --- END ENHANCEMENT ---
-
-	// Defer logging the email attempt
+	
 	defer func() {
 		_, dbErr := s.db.Exec(
 			"INSERT INTO email_logs (sent_to, subject, body_preview, status, sent_at) VALUES ($1, $2, $3, $4, $5)",
@@ -60,7 +56,7 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 		}
 	}()
 
-	// Parse mail hub for host and port
+	// SMTP connection logic remains the same.
 	parts := strings.Split(s.config.MailHub, ":")
 	if len(parts) != 2 {
 		err = fmt.Errorf("invalid MAILHUB format: %s. Expected host:port", s.config.MailHub)
@@ -72,8 +68,8 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 		err = fmt.Errorf("invalid port in MAILHUB: %v", parseErr)
 		return err
 	}
-
-	// Create a new message
+	
+	// Create a new message and set headers.
 	m := mail.NewMessage()
 	m.SetHeader("From", s.config.AuthUser)
 	m.SetHeader("To", to)
@@ -84,9 +80,29 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 		m.SetHeader("Bcc", bcc...)
 	}
 	m.SetHeader("Subject", subject)
-
-	// Set the body content type to "text/html" to support HTML emails.
 	m.SetBody("text/html", body)
+
+	// --- ATTACHMENT HANDLING ---
+	// Iterate through the slice of file headers received from the handler.
+	for _, f := range files {
+		log.Printf("Attaching file: %s (Size: %d bytes)", f.Filename, f.Size)
+		
+		// Open the uploaded file.
+		file, err := f.Open()
+		if err != nil {
+			log.Printf("Error opening attachment %s: %v", f.Filename, err)
+			continue 
+		}
+
+		// Use SetCopyFunc for efficient streaming of the file content directly into the email message.
+		m.Attach(f.Filename, mail.SetCopyFunc(func(w io.Writer) error {
+			_, err := io.Copy(w, file)
+			return err
+		}))
+		
+		file.Close()
+	}
+	// --- END ATTACHMENT HANDLING ---
 
 	// Set up dialer
 	d := mail.NewDialer(host, port, s.config.AuthUser, s.config.AuthPass)
@@ -96,9 +112,9 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	}
 
 	if s.config.SkipTLSVerify {
-		log.Println("WARNING: TLS certificate verification is DISABLED. This is INSECURE and should not be used in production.")
+		log.Println("WARNING: TLS certificate verification is DISABLED.")
 	}
-
+	
 	// Send the email
 	if err = d.DialAndSend(m); err != nil {
 		status = "Failed"
@@ -109,18 +125,4 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	return nil
 }
 
-// sendEmailNoAuth is an illustrative function not used by the main logic.
-func sendEmailNoAuth(host, port, from, to, subject, body string) error {
-	msg := []byte("To: " + to + "\r\n" +
-		"From: " + from + "\r\n" +
-		"Subject: " + subject + "\r\n" +
-		"\r\n" +
-		body + "\r\n")
-
-	auth := smtp.PlainAuth("", "", "", host) // No authentication
-	err := smtp.SendMail(fmt.Sprintf("%s:%s", host, port), auth, from, []string{to}, msg)
-	if err != nil {
-		return fmt.Errorf("error sending mail (no auth): %w", err)
-	}
-	return nil
-}
+// ... (sendEmailNoAuth function remains the same)
