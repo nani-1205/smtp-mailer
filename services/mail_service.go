@@ -3,12 +3,8 @@ package services
 import (
 	"crypto/tls"
 	"database/sql"
-	"encoding/json" // ADDED: To unmarshal JSON from the request
 	"fmt"
-	"io"
 	"log"
-	"mime/multipart" // ADDED: To handle the request directly
-	"net/http"       // ADDED: To accept the http.Request object
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,15 +15,7 @@ import (
 	mail "gopkg.in/gomail.v2"
 )
 
-// sendMailRequestData struct is now internal to the service package
-type sendMailRequestData struct {
-	To      string   `json:"to"`
-	CC      []string `json:"cc,omitempty"`
-	BCC     []string `json:"bcc,omitempty"`
-	Subject string   `json:"subject"`
-	Body    string   `json:"body"`
-}
-
+// Pre-compile the regular expression for efficiency.
 var stripTagsRegex = regexp.MustCompile("<[^>]*>")
 
 // MailService handles sending emails and logging to DB
@@ -44,36 +32,13 @@ func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 	}
 }
 
-// SendEmailAndLog now accepts the entire http.Request and handles parsing internally.
-func (s *MailService) SendEmailAndLog(r *http.Request) error {
+// SendEmailAndLog function signature is reverted to not accept files.
+func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string) error {
 	status := "Failed"
 	var err error
 
-	// 1. Parse the multipart form from the request.
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		return fmt.Errorf("unable to parse form data, file might be too large: %w", err)
-	}
-
-	// 2. Get and unmarshal the JSON data from the "data" form field.
-	dataField := r.FormValue("data")
-	if dataField == "" {
-		return fmt.Errorf("missing 'data' field in multipart form")
-	}
-	var reqData sendMailRequestData
-	if err := json.Unmarshal([]byte(dataField), &reqData); err != nil {
-		return fmt.Errorf("invalid JSON in 'data' field: %w", err)
-	}
-	
-	// 2.5 Validate the unmarshaled data
-	if reqData.To == "" || reqData.Subject == "" || reqData.Body == "" {
-		return fmt.Errorf("fields 'to', 'subject', and 'body' are required in JSON data")
-	}
-
-	// 3. Get the files from the form.
-	files := r.MultipartForm.File["attachments"]
-
-	// --- LOGGING AND DEFER SETUP ---
-	plainTextBody := stripTagsRegex.ReplaceAllString(reqData.Body, "")
+	// Create a clean log preview from the HTML body.
+	plainTextBody := stripTagsRegex.ReplaceAllString(body, "")
 	bodyPreview := plainTextBody
 	if len(bodyPreview) > 200 {
 		bodyPreview = bodyPreview[:200] + "..."
@@ -82,49 +47,40 @@ func (s *MailService) SendEmailAndLog(r *http.Request) error {
 	defer func() {
 		_, dbErr := s.db.Exec(
 			"INSERT INTO email_logs (sent_to, subject, body_preview, status, sent_at) VALUES ($1, $2, $3, $4, $5)",
-			reqData.To, reqData.Subject, bodyPreview, status, time.Now(),
+			to, subject, bodyPreview, status, time.Now(),
 		)
 		if dbErr != nil {
 			log.Printf("CRITICAL: Failed to log email attempt to DB: %v", dbErr)
 		}
 	}()
 
-	// --- EMAIL CONSTRUCTION ---
+	// Parse SMTP server details.
 	parts := strings.Split(s.config.MailHub, ":")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid MAILHUB format: %s. Expected host:port", s.config.MailHub)
+		err = fmt.Errorf("invalid MAILHUB format: %s. Expected host:port", s.config.MailHub)
+		return err
 	}
-	host, portStr := parts[0], parts[1]
-	port, _ := strconv.Atoi(portStr)
-
+	host := parts[0]
+	port, parseErr := strconv.Atoi(parts[1])
+	if parseErr != nil {
+		err = fmt.Errorf("invalid port in MAILHUB: %v", parseErr)
+		return err
+	}
+	
+	// Create a new message and set headers.
 	m := mail.NewMessage()
 	m.SetHeader("From", s.config.AuthUser)
-	m.SetHeader("To", reqData.To)
-	if len(reqData.CC) > 0 {
-		m.SetHeader("Cc", reqData.CC...)
+	m.SetHeader("To", to)
+	if len(cc) > 0 {
+		m.SetHeader("Cc", cc...)
 	}
-	if len(reqData.BCC) > 0 {
-		m.SetHeader("Bcc", reqData.BCC...)
+	if len(bcc) > 0 {
+		m.SetHeader("Bcc", bcc...)
 	}
-	m.SetHeader("Subject", reqData.Subject)
-	m.SetBody("text/html", reqData.Body)
+	m.SetHeader("Subject", subject)
+	m.SetBody("text/html", body)
 
-	// Attach files.
-	for _, f := range files {
-		log.Printf("Attaching file: %s", f.Filename)
-		file, err := f.Open()
-		if err != nil {
-			log.Printf("Warning: could not open attachment %s: %v. Skipping file.", f.Filename, err)
-			continue
-		}
-		m.Attach(f.Filename, mail.SetCopyFunc(func(w io.Writer) error {
-			_, err := io.Copy(w, file)
-			return err
-		}))
-		file.Close()
-	}
-
-	// --- DIAL AND SEND ---
+	// Set up dialer.
 	d := mail.NewDialer(host, port, s.config.AuthUser, s.config.AuthPass)
 	d.TLSConfig = &tls.Config{
 		ServerName:         host,
@@ -135,12 +91,12 @@ func (s *MailService) SendEmailAndLog(r *http.Request) error {
 		log.Println("WARNING: TLS certificate verification is DISABLED.")
 	}
 	
+	// Send the email.
 	if err = d.DialAndSend(m); err != nil {
-		status = "Failed" // This will be caught by the defer function
+		status = "Failed"
 		return fmt.Errorf("could not send email: %w", err)
 	}
 
-	status = "Success" // This will be caught by the defer function
-	log.Printf("Email sent successfully to %s with %d attachments.", reqData.To, len(files))
+	status = "Success"
 	return nil
 }

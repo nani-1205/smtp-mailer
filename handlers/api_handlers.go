@@ -2,9 +2,8 @@ package handlers
 
 import (
 	"database/sql"
-	// "encoding/json" // No longer needed here
+	"encoding/json"
 	"log"
-	// "mime/multipart" // REMOVED: This is the key to fixing the build error
 	"net/http"
 	"strconv"
 	"time"
@@ -15,39 +14,63 @@ import (
 	"smtp-mailer/utils"
 )
 
-// The SendMailRequest struct is no longer needed in this file.
+// SendMailRequest struct for parsing the JSON payload.
+type SendMailRequest struct {
+	To      string   `json:"to"`
+	CC      []string `json:"cc,omitempty"`
+	BCC     []string `json:"bcc,omitempty"`
+	Subject string   `json:"subject"`
+	Body    string   `json:"body"`
+}
 
-// SendMailHandler is now much simpler.
+// SendMailHandler handles a standard JSON request for sending emails.
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// 1. Check the daily mail limit.
+		if r.Method != http.MethodPost {
+			errorResponse(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req SendMailRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			errorResponse(w, "Invalid request payload", http.StatusBadRequest)
+			return
+		}
+
+		if req.To == "" || req.Subject == "" || req.Body == "" {
+			errorResponse(w, "Fields 'to', 'subject', and 'body' are required.", http.StatusBadRequest)
+			return
+		}
+
+		// Check daily mail limit.
 		currentCount, err := utils.GetDailyMailCount(db)
 		if err != nil {
 			log.Printf("Error getting daily mail count: %v", err)
 			errorResponse(w, "Internal server error checking mail limit", http.StatusInternalServerError)
 			return
 		}
+
 		if currentCount >= cfg.DailyMailLimit {
-			errorResponse(w, "Daily mail limit exceeded.", http.StatusForbidden)
+			errorResponse(w, "Daily mail limit exceeded. Try again tomorrow after 12:00 AM.", http.StatusForbidden)
 			return
 		}
-		
-		// 2. Pass the entire request to the service layer.
+
+		// Call the email service without the files argument.
 		emailService := services.NewMailService(cfg, db)
-		err = emailService.SendEmailAndLog(r) // Pass the request object 'r'
+		err = emailService.SendEmailAndLog(req.To, req.CC, req.BCC, req.Subject, req.Body)
 
 		if err != nil {
-			log.Printf("Error from email service: %v", err)
+			log.Printf("Error sending email to %s: %v", req.To, err)
 			errorResponse(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
+
+		log.Printf("Email sent successfully to %s", req.To)
 		successResponse(w, "Email sent successfully", nil)
 	}
 }
 
-// --- Other handlers remain unchanged ---
-
+// GetLogsHandler remains the same.
 func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		queryDateStr := r.URL.Query().Get("date")
@@ -112,6 +135,7 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// GetDailyLimitHandler remains the same.
 func GetDailyLimitHandler(db *sql.DB, dailyLimit int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		currentCount, err := utils.GetDailyMailCount(db)
@@ -124,6 +148,7 @@ func GetDailyLimitHandler(db *sql.DB, dailyLimit int) http.HandlerFunc {
 	}
 }
 
+// GetEmailStatsHandler remains the same.
 func GetEmailStatsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		statusCounts, err := utils.GetEmailStatusDistribution(db)
@@ -135,6 +160,7 @@ func GetEmailStatsHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// GetDailySendsHandler remains the same.
 func GetDailySendsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		daysStr := r.URL.Query().Get("days")
