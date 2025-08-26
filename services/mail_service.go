@@ -7,7 +7,7 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
-	"net/smtp"
+	// "net/smtp" // REMOVED: This import is no longer needed
 	"regexp"
 	"strconv"
 	"strings"
@@ -15,9 +15,10 @@ import (
 
 	"smtp-mailer/config"
 
-	mail "gopkg.in/gomail.v2" // CORRECTED: gopkg.in, not gop.in
+	mail "gopkg.in/gomail.v2"
 )
 
+// Pre-compile the regular expression for efficiency. This will find and remove any HTML tag.
 var stripTagsRegex = regexp.MustCompile("<[^>]*>")
 
 // MailService handles sending emails and logging to DB
@@ -122,4 +123,4 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	return nil
 }
 
-// ... (sendEmailNoAuth function remains the same)
+// REMOVED the unused sendEmailNoAuth function that was causing the import error.
