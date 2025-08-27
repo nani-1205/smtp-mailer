@@ -4,7 +4,9 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"fmt"
+	"io" // ADDED: Required for copying file data
 	"log"
+	"mime/multipart" // ADDED: Required for the FileHeader type
 	"regexp"
 	"strconv"
 	"strings"
@@ -32,12 +34,12 @@ func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 	}
 }
 
-// SendEmailAndLog function signature is reverted to not accept files.
-func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string) error {
+// SendEmailAndLog now accepts a slice of multipart.FileHeader for attachments.
+func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string, files []*multipart.FileHeader) error {
 	status := "Failed"
 	var err error
 
-	// Create a clean log preview from the HTML body.
+	// Create a clean log preview.
 	plainTextBody := stripTagsRegex.ReplaceAllString(body, "")
 	bodyPreview := plainTextBody
 	if len(bodyPreview) > 200 {
@@ -57,15 +59,10 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	// Parse SMTP server details.
 	parts := strings.Split(s.config.MailHub, ":")
 	if len(parts) != 2 {
-		err = fmt.Errorf("invalid MAILHUB format: %s. Expected host:port", s.config.MailHub)
-		return err
+		return fmt.Errorf("invalid MAILHUB format: %s. Expected host:port", s.config.MailHub)
 	}
 	host := parts[0]
-	port, parseErr := strconv.Atoi(parts[1])
-	if parseErr != nil {
-		err = fmt.Errorf("invalid port in MAILHUB: %v", parseErr)
-		return err
-	}
+	port, _ := strconv.Atoi(parts[1])
 	
 	// Create a new message and set headers.
 	m := mail.NewMessage()
@@ -79,6 +76,30 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	}
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/html", body)
+
+	// --- ATTACHMENT LOGIC ---
+	// Iterate through the file headers and attach each file.
+	for _, f := range files {
+		log.Printf("Attaching file: %s (%d bytes)", f.Filename, f.Size)
+		
+		// Open the file from the multipart header
+		file, err := f.Open()
+		if err != nil {
+			log.Printf("Error opening attached file %s: %v", f.Filename, err)
+			return err // Fail the email if an attachment can't be opened
+		}
+		
+		// Attach the file to the message using a copy function.
+		// This is efficient as it streams the file data without loading it all into memory.
+		m.Attach(f.Filename, mail.SetCopyFunc(func(w io.Writer) error {
+			_, err := io.Copy(w, file)
+			return err
+		}))
+
+		// It is crucial to close the file handle after it has been copied.
+		file.Close()
+	}
+	// --- END ATTACHMENT LOGIC ---
 
 	// Set up dialer.
 	d := mail.NewDialer(host, port, s.config.AuthUser, s.config.AuthPass)

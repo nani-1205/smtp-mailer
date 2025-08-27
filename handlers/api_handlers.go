@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"log"
+	"mime/multipart" // ADDED: Required for handling file uploads
 	"net/http"
 	"strconv"
 	"time"
@@ -14,16 +14,10 @@ import (
 	"smtp-mailer/utils"
 )
 
-// SendMailRequest struct for parsing the JSON payload.
-type SendMailRequest struct {
-	To      string   `json:"to"`
-	CC      []string `json:"cc,omitempty"`
-	BCC     []string `json:"bcc,omitempty"`
-	Subject string   `json:"subject"`
-	Body    string   `json:"body"`
-}
+// The SendMailRequest struct is no longer used by the SendMailHandler
+// as we now read fields directly from the multipart form.
 
-// SendMailHandler handles a standard JSON request for sending emails.
+// SendMailHandler is updated to handle multipart/form-data requests for file attachments.
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -31,16 +25,31 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		var req SendMailRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			errorResponse(w, "Invalid request payload", http.StatusBadRequest)
+		// Parse the multipart form. 10 << 20 specifies a maximum
+		// upload of 10 MB for all files combined in memory.
+		if err := r.ParseMultipartForm(10 << 20); err != nil {
+			errorResponse(w, "Unable to parse form, check file size limit (10MB)", http.StatusBadRequest)
 			return
 		}
 
-		if req.To == "" || req.Subject == "" || req.Body == "" {
+		// Get standard fields from the form values.
+		to := r.FormValue("to")
+		subject := r.FormValue("subject")
+		body := r.FormValue("body")
+		
+		// For fields that can have multiple values (like cc, bcc),
+		// access the form map directly.
+		cc := r.Form["cc"]
+		bcc := r.Form["bcc"]
+
+		if to == "" || subject == "" || body == "" {
 			errorResponse(w, "Fields 'to', 'subject', and 'body' are required.", http.StatusBadRequest)
 			return
 		}
+
+		// Get the file headers from the form.
+		// "attachments" is the key we use in Postman and the frontend.
+		files := r.MultipartForm.File["attachments"]
 
 		// Check daily mail limit.
 		currentCount, err := utils.GetDailyMailCount(db)
@@ -55,17 +64,17 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		// Call the email service without the files argument.
+		// Call the email service, now passing the files.
 		emailService := services.NewMailService(cfg, db)
-		err = emailService.SendEmailAndLog(req.To, req.CC, req.BCC, req.Subject, req.Body)
+		err = emailService.SendEmailAndLog(to, cc, bcc, subject, body, files)
 
 		if err != nil {
-			log.Printf("Error sending email to %s: %v", req.To, err)
+			log.Printf("Error sending email to %s: %v", to, err)
 			errorResponse(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		log.Printf("Email sent successfully to %s", req.To)
+		log.Printf("Email sent successfully to %s with %d attachments", to, len(files))
 		successResponse(w, "Email sent successfully", nil)
 	}
 }
