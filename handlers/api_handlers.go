@@ -2,8 +2,9 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json" // Re-added for handling JSON body
+	"encoding/json"
 	"log"
+	"mime/multipart" // IMPORTED AND NOW CORRECTLY USED
 	"net/http"
 	"strconv"
 	"time"
@@ -14,16 +15,9 @@ import (
 	"smtp-mailer/utils"
 )
 
-// SendMailRequest struct is needed again to unmarshal the JSON request.
-type SendMailRequest struct {
-	To      string   `json:"to"`
-	CC      []string `json:"cc,omitempty"`
-	BCC     []string `json:"bcc,omitempty"`
-	Subject string   `json:"subject"`
-	Body    string   `json:"body"`
-}
+// NOTE: We no longer use a JSON struct for this handler, as data comes from a form.
 
-// SendMailHandler is reverted to handle a standard JSON request for sending emails.
+// SendMailHandler is now correctly written to handle multipart/form-data requests.
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -31,17 +25,29 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		// Revert to decoding a JSON body from the request.
-		var req SendMailRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			errorResponse(w, "Invalid request payload", http.StatusBadRequest)
+		// Parse the multipart form, allowing up to 10 MB for all files combined in memory.
+		if err := r.ParseMultipartForm(10 << 20); err != nil {
+			errorResponse(w, "Unable to parse form. Check file size (limit 10MB).", http.StatusBadRequest)
 			return
 		}
 
-		if req.To == "" || req.Subject == "" || req.Body == "" {
+		// Read standard text fields from the parsed form's values.
+		to := r.FormValue("to")
+		subject := r.FormValue("subject")
+		body := r.FormValue("body")
+		
+		// For fields that can have multiple values (like cc, bcc from multiple inputs),
+		// access the form map directly.
+		cc := r.Form["cc"]
+		bcc := r.Form["bcc"]
+
+		if to == "" || subject == "" || body == "" {
 			errorResponse(w, "Fields 'to', 'subject', and 'body' are required.", http.StatusBadRequest)
 			return
 		}
+
+		// Read the file headers from the form using the "attachments" key.
+		files := r.MultipartForm.File["attachments"]
 
 		// Check daily mail limit.
 		currentCount, err := utils.GetDailyMailCount(db)
@@ -52,26 +58,26 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		}
 
 		if currentCount >= cfg.DailyMailLimit {
-			errorResponse(w, "Daily mail limit exceeded. Try again tomorrow after 12:00 AM.", http.StatusForbidden)
+			errorResponse(w, "Daily mail limit exceeded.", http.StatusForbidden)
 			return
 		}
 
-		// Call the email service without the files argument.
+		// Call the email service, passing the files.
 		emailService := services.NewMailService(cfg, db)
-		err = emailService.SendEmailAndLog(req.To, req.CC, req.BCC, req.Subject, req.Body)
+		err = emailService.SendEmailAndLog(to, cc, bcc, subject, body, files)
 
 		if err != nil {
-			log.Printf("Error sending email to %s: %v", req.To, err)
+			log.Printf("Error sending email to %s: %v", to, err)
 			errorResponse(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		log.Printf("Email sent successfully to %s", req.To)
+		log.Printf("Email sent successfully to %s with %d attachments", to, len(files))
 		successResponse(w, "Email sent successfully", nil)
 	}
 }
 
-// --- Other handlers remain unchanged ---
+// --- Other handlers (GetLogs, GetLimit, etc.) remain unchanged ---
 
 func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
