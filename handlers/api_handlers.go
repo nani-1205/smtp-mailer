@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json" // Re-added for handling JSON body
 	"log"
-	"mime/multipart" // ADDED: Required for handling file uploads
 	"net/http"
 	"strconv"
 	"time"
@@ -14,10 +14,16 @@ import (
 	"smtp-mailer/utils"
 )
 
-// The SendMailRequest struct is no longer used by the SendMailHandler
-// as we now read fields directly from the multipart form.
+// SendMailRequest struct is needed again to unmarshal the JSON request.
+type SendMailRequest struct {
+	To      string   `json:"to"`
+	CC      []string `json:"cc,omitempty"`
+	BCC     []string `json:"bcc,omitempty"`
+	Subject string   `json:"subject"`
+	Body    string   `json:"body"`
+}
 
-// SendMailHandler is updated to handle multipart/form-data requests for file attachments.
+// SendMailHandler is reverted to handle a standard JSON request for sending emails.
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -25,31 +31,17 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		// Parse the multipart form. 10 << 20 specifies a maximum
-		// upload of 10 MB for all files combined in memory.
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
-			errorResponse(w, "Unable to parse form, check file size limit (10MB)", http.StatusBadRequest)
+		// Revert to decoding a JSON body from the request.
+		var req SendMailRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			errorResponse(w, "Invalid request payload", http.StatusBadRequest)
 			return
 		}
 
-		// Get standard fields from the form values.
-		to := r.FormValue("to")
-		subject := r.FormValue("subject")
-		body := r.FormValue("body")
-		
-		// For fields that can have multiple values (like cc, bcc),
-		// access the form map directly.
-		cc := r.Form["cc"]
-		bcc := r.Form["bcc"]
-
-		if to == "" || subject == "" || body == "" {
+		if req.To == "" || req.Subject == "" || req.Body == "" {
 			errorResponse(w, "Fields 'to', 'subject', and 'body' are required.", http.StatusBadRequest)
 			return
 		}
-
-		// Get the file headers from the form.
-		// "attachments" is the key we use in Postman and the frontend.
-		files := r.MultipartForm.File["attachments"]
 
 		// Check daily mail limit.
 		currentCount, err := utils.GetDailyMailCount(db)
@@ -64,22 +56,23 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		// Call the email service, now passing the files.
+		// Call the email service without the files argument.
 		emailService := services.NewMailService(cfg, db)
-		err = emailService.SendEmailAndLog(to, cc, bcc, subject, body, files)
+		err = emailService.SendEmailAndLog(req.To, req.CC, req.BCC, req.Subject, req.Body)
 
 		if err != nil {
-			log.Printf("Error sending email to %s: %v", to, err)
+			log.Printf("Error sending email to %s: %v", req.To, err)
 			errorResponse(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		log.Printf("Email sent successfully to %s with %d attachments", to, len(files))
+		log.Printf("Email sent successfully to %s", req.To)
 		successResponse(w, "Email sent successfully", nil)
 	}
 }
 
-// GetLogsHandler remains the same.
+// --- Other handlers remain unchanged ---
+
 func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		queryDateStr := r.URL.Query().Get("date")
@@ -144,7 +137,6 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GetDailyLimitHandler remains the same.
 func GetDailyLimitHandler(db *sql.DB, dailyLimit int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		currentCount, err := utils.GetDailyMailCount(db)
@@ -157,7 +149,6 @@ func GetDailyLimitHandler(db *sql.DB, dailyLimit int) http.HandlerFunc {
 	}
 }
 
-// GetEmailStatsHandler remains the same.
 func GetEmailStatsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		statusCounts, err := utils.GetEmailStatusDistribution(db)
@@ -169,7 +160,6 @@ func GetEmailStatsHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GetDailySendsHandler remains the same.
 func GetDailySendsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		daysStr := r.URL.Query().Get("days")
