@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"   // Used by errorResponse and successResponse
+	// "encoding/json" // REMOVED: This will now be handled ONLY by response.go
 	"log"
-	"mime/multipart" // Used by r.ParseMultipartForm and r.MultipartForm.File
+	"mime/multipart" // REQUIRED and now EXPLICITLY USED
 	"net/http"
 	"strconv"
 	"time"
@@ -15,16 +15,13 @@ import (
 	"smtp-mailer/utils"
 )
 
-// SendMailRequest struct for JSON handling (used by other handlers, and good for consistency)
-type SendMailRequest struct {
-	To      string   `json:"to"`
-	CC      []string `json:"cc,omitempty"`
-	BCC     []string `json:"bcc,omitempty"`
-	Subject string   `json:"subject"`
-	Body    string   `json:"body"`
-}
+// SendMailRequest struct is NO LONGER NEEDED in this file.
+// It was only for JSON payloads, and this handler now uses multipart.
+// The other handlers (GetLogs, etc.) which might theoretically use JSON
+// do not rely on this struct directly for their functionality in this package.
+// We will remove it from here.
 
-// SendMailHandler is correctly written to handle multipart/form-data requests.
+// SendMailHandler is now definitively fixed for multipart/form-data.
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -32,8 +29,7 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		// Use mime/multipart.ParseMultipartForm to parse the incoming request.
-		// This is the explicit usage of "mime/multipart".
+		// This line explicitly USES "mime/multipart".
 		if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB limit
 			errorResponse(w, "Unable to parse form. Check file size (limit 10MB).", http.StatusBadRequest)
 			return
@@ -44,7 +40,6 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		subject := r.FormValue("subject")
 		body := r.FormValue("body")
 		
-		// Read potentially multiple values for CC and BCC.
 		cc := r.Form["cc"]
 		bcc := r.Form["bcc"]
 
@@ -53,7 +48,7 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		// Get file headers from the form. This also uses "mime/multipart".
+		// Get file headers from the form. This also explicitly USES "mime/multipart".
 		files := r.MultipartForm.File["attachments"]
 
 		// Check daily mail limit.
@@ -71,7 +66,7 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 
 		// Call the email service, passing the files.
 		emailService := services.NewMailService(cfg, db)
-		err = emailService.SendEmailAndLog(to, cc, bcc, subject, body, files)
+		err = emailService.SendEmailAndLog(to, cc, bcc, subject, body, files) // 'files' parameter uses mime/multipart types
 
 		if err != nil {
 			log.Printf("Error sending email to %s: %v", to, err)
@@ -80,8 +75,7 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		}
 
 		log.Printf("Email sent successfully to %s with %d attachments", to, len(files))
-		// successResponse implicitly uses "encoding/json".
-		successResponse(w, "Email sent successfully", nil)
+		successResponse(w, "Email sent successfully", nil) // Uses JSON response helpers (defined in response.go)
 	}
 }
 
@@ -146,7 +140,7 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 			errorResponse(w, "Internal server error fetching logs", http.StatusInternalServerError)
 			return
 		}
-		successResponse(w, "Email logs retrieved successfully", logs) // Uses encoding/json
+		successResponse(w, "Email logs retrieved successfully", logs) // Uses JSON response helpers
 	}
 }
 
@@ -159,7 +153,7 @@ func GetDailyLimitHandler(db *sql.DB, dailyLimit int) http.HandlerFunc {
 			return
 		}
 		data := map[string]interface{}{"current_count": currentCount, "limit": dailyLimit, "remaining": dailyLimit - currentCount}
-		successResponse(w, "Daily mail limit status retrieved", data) // Uses encoding/json
+		successResponse(w, "Daily mail limit status retrieved", data) // Uses JSON response helpers
 	}
 }
 
@@ -171,7 +165,7 @@ func GetEmailStatsHandler(db *sql.DB) http.HandlerFunc {
 			errorResponse(w, "Internal server error fetching email stats", http.StatusInternalServerError)
 			return
 		}
-		successResponse(w, "Email status distribution retrieved", statusCounts) // Uses encoding/json
+		successResponse(w, "Email status distribution retrieved", statusCounts) // Uses JSON response helpers
 	}
 }
 
@@ -190,6 +184,6 @@ func GetDailySendsHandler(db *sql.DB) http.HandlerFunc {
 			errorResponse(w, "Internal server error fetching daily sends", http.StatusInternalServerError)
 			return
 		}
-		successResponse(w, "Daily sends over period retrieved", dailySends) // Uses encoding/json
+		successResponse(w, "Daily sends over period retrieved", dailySends) // Uses JSON response helpers
 	}
 }
