@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"   // This is used by SendMailRequest and the response helpers
+	"encoding/json"   // Used by errorResponse and successResponse
 	"log"
-	"mime/multipart" // This is used by r.ParseMultipartForm and r.MultipartForm.File
+	"mime/multipart" // Used by r.ParseMultipartForm and r.MultipartForm.File
 	"net/http"
 	"strconv"
 	"time"
@@ -15,8 +15,7 @@ import (
 	"smtp-mailer/utils"
 )
 
-// SendMailRequest struct is still needed for other handlers (like if you made a JSON API for sending, or for consistency).
-// For the multipart form handler, we read fields directly.
+// SendMailRequest struct for JSON handling (used by other handlers, and good for consistency)
 type SendMailRequest struct {
 	To      string   `json:"to"`
 	CC      []string `json:"cc,omitempty"`
@@ -33,8 +32,9 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		// Correctly using mime/multipart by parsing the form.
-		if err := r.ParseMultipartForm(10 << 20); err != nil { // Uses mime/multipart
+		// Use mime/multipart.ParseMultipartForm to parse the incoming request.
+		// This is the explicit usage of "mime/multipart".
+		if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB limit
 			errorResponse(w, "Unable to parse form. Check file size (limit 10MB).", http.StatusBadRequest)
 			return
 		}
@@ -44,6 +44,7 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		subject := r.FormValue("subject")
 		body := r.FormValue("body")
 		
+		// Read potentially multiple values for CC and BCC.
 		cc := r.Form["cc"]
 		bcc := r.Form["bcc"]
 
@@ -52,8 +53,8 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		// Correctly using mime/multipart to get file headers.
-		files := r.MultipartForm.File["attachments"] // Uses mime/multipart
+		// Get file headers from the form. This also uses "mime/multipart".
+		files := r.MultipartForm.File["attachments"]
 
 		// Check daily mail limit.
 		currentCount, err := utils.GetDailyMailCount(db)
@@ -79,12 +80,12 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		}
 
 		log.Printf("Email sent successfully to %s with %d attachments", to, len(files))
-		// The `successResponse` helper function implicitly uses "encoding/json".
-		successResponse(w, "Email sent successfully", nil) // Uses encoding/json
+		// successResponse implicitly uses "encoding/json".
+		successResponse(w, "Email sent successfully", nil)
 	}
 }
 
-// GetLogsHandler remains the same. It does NOT use mime/multipart.
+// GetLogsHandler remains the same.
 func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		queryDateStr := r.URL.Query().Get("date")
