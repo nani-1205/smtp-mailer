@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
+	"encoding/json"   // This IS used by the response helpers in this package
 	"log"
-	"mime/multipart" // IMPORTED AND NOW CORRECTLY USED
+	"mime/multipart" // This IS now used by ParseMultipartForm
 	"net/http"
 	"strconv"
 	"time"
@@ -15,17 +15,6 @@ import (
 	"smtp-mailer/utils"
 )
 
-// NOTE: The SendMailRequest struct is not used by SendMailHandler, but other handlers may use it.
-// We will keep the other handlers as they were, since they need json.
-type SendMailRequest struct {
-	To      string   `json:"to"`
-	CC      []string `json:"cc,omitempty"`
-	BCC     []string `json:"bcc,omitempty"`
-	Subject string   `json:"subject"`
-	Body    string   `json:"body"`
-}
-
-
 // SendMailHandler is now correctly written to handle multipart/form-data requests.
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -35,19 +24,16 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		}
 
 		// THIS IS THE CRUCIAL PART THAT USES the "mime/multipart" package.
-		// It parses the form data, including files.
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
 			errorResponse(w, "Unable to parse form. Check file size (limit 10MB).", http.StatusBadRequest)
 			return
 		}
 
-		// Read standard text fields from the parsed form's values.
+		// Read text fields from the parsed form's values.
 		to := r.FormValue("to")
 		subject := r.FormValue("subject")
 		body := r.FormValue("body")
 		
-		// For fields that can have multiple values (like cc, bcc from multiple inputs),
-		// access the form map directly.
 		cc := r.Form["cc"]
 		bcc := r.Form["bcc"]
 
@@ -83,7 +69,6 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		}
 
 		log.Printf("Email sent successfully to %s with %d attachments", to, len(files))
-		// This function call implicitly USES the "encoding/json" package via the response helpers.
 		successResponse(w, "Email sent successfully", nil)
 	}
 }
