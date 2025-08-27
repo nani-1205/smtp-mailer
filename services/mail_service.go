@@ -4,9 +4,8 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"fmt"
-	"io"             // ADDED: Required for copying file data
 	"log"
-	"mime/multipart" // ADDED: Required for the FileHeader type
+	// "mime/multipart" // REMOVED: Not needed for file handling
 	"regexp"
 	"strconv"
 	"strings"
@@ -31,8 +30,8 @@ func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 	}
 }
 
-// SendEmailAndLog now accepts a slice of *multipart.FileHeader for attachments.
-func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string, files []*multipart.FileHeader) error {
+// SendEmailAndLog function signature is reverted to not accept files.
+func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string) error { // 'files' argument removed
 	status := "Failed"
 	var err error
 
@@ -54,10 +53,15 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 
 	parts := strings.Split(s.config.MailHub, ":")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid MAILHUB format: %s. Expected host:port", s.config.MailHub)
+		err = fmt.Errorf("invalid MAILHUB format: %s. Expected host:port", s.config.MailHub)
+		return err
 	}
 	host := parts[0]
-	port, _ := strconv.Atoi(parts[1])
+	port, parseErr := strconv.Atoi(parts[1])
+	if parseErr != nil {
+		err = fmt.Errorf("invalid port in MAILHUB: %v", parseErr)
+		return err
+	}
 	
 	m := mail.NewMessage()
 	m.SetHeader("From", s.config.AuthUser)
@@ -71,23 +75,8 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/html", body)
 
-	// --- ATTACHMENT LOGIC ---
-	for _, f := range files {
-		log.Printf("Attaching file: %s (%d bytes)", f.Filename, f.Size)
-		
-		file, err := f.Open()
-		if err != nil {
-			log.Printf("Error opening attached file %s: %v", f.Filename, err)
-			return err
-		}
-		
-		m.Attach(f.Filename, mail.SetCopyFunc(func(w io.Writer) error {
-			_, err := io.Copy(w, file)
-			return err
-		}))
-
-		file.Close()
-	}
+	// --- ATTACHMENT LOGIC (Removed) ---
+	// File attachment loop is gone.
 	// --- END ATTACHMENT LOGIC ---
 
 	d := mail.NewDialer(host, port, s.config.AuthUser, s.config.AuthPass)
