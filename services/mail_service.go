@@ -4,10 +4,9 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"fmt"
-	"io" // ADDED: Required for copying file data
 	"log"
-	"mime/multipart" // ADDED: Required for the FileHeader type
-	"regexp"
+	"net/smtp"
+	"regexp" // ADDED: Go's standard regular expression library
 	"strconv"
 	"strings"
 	"time"
@@ -17,7 +16,7 @@ import (
 	mail "gopkg.in/gomail.v2"
 )
 
-// Pre-compile the regular expression for efficiency.
+// Pre-compile the regular expression for efficiency. This will find and remove any HTML tag.
 var stripTagsRegex = regexp.MustCompile("<[^>]*>")
 
 // MailService handles sending emails and logging to DB
@@ -34,18 +33,23 @@ func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 	}
 }
 
-// SendEmailAndLog now accepts a slice of multipart.FileHeader for attachments.
-func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string, files []*multipart.FileHeader) error {
+// SendEmailAndLog sends emails as HTML and logs a plain text preview.
+func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string) error {
 	status := "Failed"
 	var err error
 
-	// Create a clean log preview.
+	// --- LOGGING ENHANCEMENT using Regexp ---
+	// Use the pre-compiled regex to replace all HTML tags with an empty string.
 	plainTextBody := stripTagsRegex.ReplaceAllString(body, "")
+
+	// Truncate the PLAIN TEXT preview for the log.
 	bodyPreview := plainTextBody
 	if len(bodyPreview) > 200 {
 		bodyPreview = bodyPreview[:200] + "..."
 	}
-	
+	// --- END ENHANCEMENT ---
+
+	// Defer logging the email attempt
 	defer func() {
 		_, dbErr := s.db.Exec(
 			"INSERT INTO email_logs (sent_to, subject, body_preview, status, sent_at) VALUES ($1, $2, $3, $4, $5)",
@@ -56,15 +60,20 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 		}
 	}()
 
-	// Parse SMTP server details.
+	// Parse mail hub for host and port
 	parts := strings.Split(s.config.MailHub, ":")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid MAILHUB format: %s. Expected host:port", s.config.MailHub)
+		err = fmt.Errorf("invalid MAILHUB format: %s. Expected host:port", s.config.MailHub)
+		return err
 	}
 	host := parts[0]
-	port, _ := strconv.Atoi(parts[1])
-	
-	// Create a new message and set headers.
+	port, parseErr := strconv.Atoi(parts[1])
+	if parseErr != nil {
+		err = fmt.Errorf("invalid port in MAILHUB: %v", parseErr)
+		return err
+	}
+
+	// Create a new message
 	m := mail.NewMessage()
 	m.SetHeader("From", s.config.AuthUser)
 	m.SetHeader("To", to)
@@ -75,33 +84,11 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 		m.SetHeader("Bcc", bcc...)
 	}
 	m.SetHeader("Subject", subject)
+
+	// Set the body content type to "text/html" to support HTML emails.
 	m.SetBody("text/html", body)
 
-	// --- ATTACHMENT LOGIC ---
-	// Iterate through the file headers and attach each file.
-	for _, f := range files {
-		log.Printf("Attaching file: %s (%d bytes)", f.Filename, f.Size)
-		
-		// Open the file from the multipart header
-		file, err := f.Open()
-		if err != nil {
-			log.Printf("Error opening attached file %s: %v", f.Filename, err)
-			return err // Fail the email if an attachment can't be opened
-		}
-		
-		// Attach the file to the message using a copy function.
-		// This is efficient as it streams the file data without loading it all into memory.
-		m.Attach(f.Filename, mail.SetCopyFunc(func(w io.Writer) error {
-			_, err := io.Copy(w, file)
-			return err
-		}))
-
-		// It is crucial to close the file handle after it has been copied.
-		file.Close()
-	}
-	// --- END ATTACHMENT LOGIC ---
-
-	// Set up dialer.
+	// Set up dialer
 	d := mail.NewDialer(host, port, s.config.AuthUser, s.config.AuthPass)
 	d.TLSConfig = &tls.Config{
 		ServerName:         host,
@@ -109,15 +96,31 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	}
 
 	if s.config.SkipTLSVerify {
-		log.Println("WARNING: TLS certificate verification is DISABLED.")
+		log.Println("WARNING: TLS certificate verification is DISABLED. This is INSECURE and should not be used in production.")
 	}
-	
-	// Send the email.
+
+	// Send the email
 	if err = d.DialAndSend(m); err != nil {
 		status = "Failed"
 		return fmt.Errorf("could not send email: %w", err)
 	}
 
 	status = "Success"
+	return nil
+}
+
+// sendEmailNoAuth is an illustrative function not used by the main logic.
+func sendEmailNoAuth(host, port, from, to, subject, body string) error {
+	msg := []byte("To: " + to + "\r\n" +
+		"From: " + from + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"\r\n" +
+		body + "\r\n")
+
+	auth := smtp.PlainAuth("", "", "", host) // No authentication
+	err := smtp.SendMail(fmt.Sprintf("%s:%s", host, port), auth, from, []string{to}, msg)
+	if err != nil {
+		return fmt.Errorf("error sending mail (no auth): %w", err)
+	}
 	return nil
 }
