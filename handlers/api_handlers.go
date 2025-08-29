@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json" // This is used by SendMailRequest and the response helpers
 	"log"
-	// "mime/multipart" // REMOVED: Not needed for JSON payloads
+	// "mime/multipart" // REMOVED: Not needed for JSON payloads // Needed for Files
 	"net/http"
 	"strconv"
 	"time"
