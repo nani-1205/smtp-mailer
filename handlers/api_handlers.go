@@ -6,7 +6,7 @@ import (
 	"log"
 	// "mime/multipart" // REMOVED: Not needed for JSON payloads // Needed for Files
 	"net/http"
-	"strconv"
+	"strconv"  //  fundamental package for handling data type conversions
 	"time"
 
 	"smtp-mailer/config"
