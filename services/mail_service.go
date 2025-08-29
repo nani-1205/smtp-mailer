@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	// "mime/multipart" // REMOVED: Not needed for file handling
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	mail "gopkg.in/gomail.v2"
 )
 
+// Pre-compile the regular expression for efficiency.
 var stripTagsRegex = regexp.MustCompile("<[^>]*>")
 
 type MailService struct {
@@ -23,6 +23,7 @@ type MailService struct {
 	db     *sql.DB
 }
 
+// NewMailService creates a new MailService instance
 func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 	return &MailService{
 		config: cfg,
@@ -30,8 +31,8 @@ func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 	}
 }
 
-// SendEmailAndLog function signature is reverted to not accept files.
-func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string) error { // 'files' argument removed
+// SendEmailAndLog sends emails as HTML and logs a plain text preview.
+func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string) error {
 	status := "Failed"
 	var err error
 
@@ -64,7 +65,17 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	}
 	
 	m := mail.NewMessage()
-	m.SetHeader("From", s.config.AuthUser)
+	
+	// --- CRITICAL CHANGE: Set 'From' header to the configured FROM_EMAIL ---
+	// This ensures the email appears to come from the specified verified address.
+	if s.config.FromEmail != "" {
+		m.SetHeader("From", s.config.FromEmail)
+	} else {
+		// Fallback to AuthUser if FromEmail is not explicitly set (though it should be for AWS SES).
+		m.SetHeader("From", s.config.AuthUser)
+	}
+	// --- END CRITICAL CHANGE ---
+
 	m.SetHeader("To", to)
 	if len(cc) > 0 {
 		m.SetHeader("Cc", cc...)
@@ -74,10 +85,6 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	}
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/html", body)
-
-	// --- ATTACHMENT LOGIC (Removed) ---
-	// File attachment loop is gone.
-	// --- END ATTACHMENT LOGIC ---
 
 	d := mail.NewDialer(host, port, s.config.AuthUser, s.config.AuthPass)
 	d.TLSConfig = &tls.Config{
@@ -95,5 +102,21 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	}
 
 	status = "Success"
+	return nil
+}
+
+// sendEmailNoAuth is an illustrative function not used by the main logic.
+func sendEmailNoAuth(host, port, from, to, subject, body string) error {
+	msg := []byte("To: " + to + "\r\n" +
+		"From: " + from + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"\r\n" +
+		body + "\r\n")
+
+	auth := smtp.PlainAuth("", "", "", host) // No authentication
+	err := smtp.SendMail(fmt.Sprintf("%s:%s", host, port), auth, from, []string{to}, msg)
+	if err != nil {
+		return fmt.Errorf("error sending mail (no auth): %w", err)
+	}
 	return nil
 }

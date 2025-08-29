@@ -18,7 +18,8 @@ type Config struct {
 	UseSTARTTLS       bool
 	DailyMailLimit    int
 	DatabaseURL       string
-	SkipTLSVerify     bool // Ensure this is present
+	SkipTLSVerify     bool
+	FromEmail         string // ADDED: Field for the specific 'From' email address
 }
 
 // LoadConfig reads configuration from .env file
@@ -39,11 +40,12 @@ func LoadConfig() (*Config, error) {
 		MailHub:           os.Getenv("MAILHUB"),
 		AuthUser:          os.Getenv("AUTHUSER"),
 		AuthPass:          os.Getenv("AUTHPASS"),
+		FromEmail:         os.Getenv("FROM_EMAIL"), // ADDED: Load FROM_EMAIL from environment
 		FromLineOverride:  os.Getenv("FROMLINEOVERRIDE"),
 		UseTLS:            os.Getenv("USETLS") == "YES",
 		UseSTARTTLS:       os.Getenv("USESTARTTLS") == "YES",
 		DailyMailLimit:    dailyLimit,
 		DatabaseURL:       os.Getenv("DATABASE_URL"),
-		SkipTLSVerify:     os.Getenv("SKIP_TLS_VERIFY") == "YES", // Ensure this is present
+		SkipTLSVerify:     os.Getenv("SKIP_TLS_VERIFY") == "YES",
 	}, nil
 }
