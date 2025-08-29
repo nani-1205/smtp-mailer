@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/smtp" // RE-ADDED: Required by sendEmailNoAuth function
 	"regexp"
 	"strconv"
 	"strings"
@@ -66,15 +67,11 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	
 	m := mail.NewMessage()
 	
-	// --- CRITICAL CHANGE: Set 'From' header to the configured FROM_EMAIL ---
-	// This ensures the email appears to come from the specified verified address.
 	if s.config.FromEmail != "" {
 		m.SetHeader("From", s.config.FromEmail)
 	} else {
-		// Fallback to AuthUser if FromEmail is not explicitly set (though it should be for AWS SES).
 		m.SetHeader("From", s.config.AuthUser)
 	}
-	// --- END CRITICAL CHANGE ---
 
 	m.SetHeader("To", to)
 	if len(cc) > 0 {
@@ -105,7 +102,7 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	return nil
 }
 
-// sendEmailNoAuth is an illustrative function not used by the main logic.
+// sendEmailNoAuth is an illustrative function that uses net/smtp.
 func sendEmailNoAuth(host, port, from, to, subject, body string) error {
 	msg := []byte("To: " + to + "\r\n" +
 		"From: " + from + "\r\n" +
@@ -113,8 +110,9 @@ func sendEmailNoAuth(host, port, from, to, subject, body string) error {
 		"\r\n" +
 		body + "\r\n")
 
-	auth := smtp.PlainAuth("", "", "", host) // No authentication
-	err := smtp.SendMail(fmt.Sprintf("%s:%s", host, port), auth, from, []string{to}, msg)
+	// The `smtp` package here requires the "net/smtp" import.
+	auth := smtp.PlainAuth("", "", "", host) // Uses net/smtp
+	err := smtp.SendMail(fmt.Sprintf("%s:%s", host, port), auth, from, []string{to}, msg) // Uses net/smtp
 	if err != nil {
 		return fmt.Errorf("error sending mail (no auth): %w", err)
 	}
