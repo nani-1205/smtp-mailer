@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"net/smtp" // RE-ADDED: Required by sendEmailNoAuth function
 	"regexp"
 	"strconv"
 	"strings"
@@ -33,6 +32,7 @@ func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 }
 
 // SendEmailAndLog sends emails as HTML and logs a plain text preview.
+// It now logs an entry for each recipient (TO, CC, BCC) to align with SES counting.
 func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string) error {
 	status := "Failed"
 	var err error
@@ -43,13 +43,30 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 		bodyPreview = bodyPreview[:200] + "..."
 	}
 	
+	// --- CRITICAL CHANGE: Calculate total recipient count ---
+	// This count will determine how many rows are inserted into the logs.
+	recipientCount := 1 // Always at least one for the 'To' recipient
+	recipientCount += len(cc)
+	recipientCount += len(bcc)
+	// --- END CRITICAL CHANGE ---
+
 	defer func() {
-		_, dbErr := s.db.Exec(
-			"INSERT INTO email_logs (sent_to, subject, body_preview, status, sent_at) VALUES ($1, $2, $3, $4, $5)",
-			to, subject, bodyPreview, status, time.Now(),
-		)
-		if dbErr != nil {
-			log.Printf("CRITICAL: Failed to log email attempt to DB: %v", dbErr)
+		// --- CRITICAL CHANGE: Insert `recipientCount` number of rows ---
+		// This makes your app's internal daily mail count (which uses COUNT(*))
+		// align with how AWS SES counts recipients.
+		for i := 0; i < recipientCount; i++ {
+			// We log the primary 'To' recipient for each entry.
+			// More granular logging (e.g., individual CC/BCC addresses) would require
+			// schema changes or more complex logic here.
+			_, dbErr := s.db.Exec(
+				"INSERT INTO email_logs (sent_to, subject, body_preview, status, sent_at) VALUES ($1, $2, $3, $4, $5)",
+				to, subject, bodyPreview, status, time.Now(),
+			)
+			if dbErr != nil {
+				log.Printf("CRITICAL: Failed to log email attempt to DB for recipient %d/%d: %v", i+1, recipientCount, dbErr)
+				// Note: If DB logging is critical, consider more robust error handling
+				// (e.g., retry, alert) for actual production systems.
+			}
 		}
 	}()
 
@@ -102,7 +119,7 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	return nil
 }
 
-// sendEmailNoAuth is an illustrative function that uses net/smtp.
+// sendEmailNoAuth is an illustrative function not used by the main logic.
 func sendEmailNoAuth(host, port, from, to, subject, body string) error {
 	msg := []byte("To: " + to + "\r\n" +
 		"From: " + from + "\r\n" +
@@ -110,9 +127,8 @@ func sendEmailNoAuth(host, port, from, to, subject, body string) error {
 		"\r\n" +
 		body + "\r\n")
 
-	// The `smtp` package here requires the "net/smtp" import.
-	auth := smtp.PlainAuth("", "", "", host) // Uses net/smtp
-	err := smtp.SendMail(fmt.Sprintf("%s:%s", host, port), auth, from, []string{to}, msg) // Uses net/smtp
+	auth := smtp.PlainAuth("", "", "", host) // No authentication
+	err := smtp.SendMail(fmt.Sprintf("%s:%s", host, port), auth, from, []string{to}, msg)
 	if err != nil {
 		return fmt.Errorf("error sending mail (no auth): %w", err)
 	}
