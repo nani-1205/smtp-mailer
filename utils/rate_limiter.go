@@ -7,12 +7,13 @@ import (
 )
 
 // GetDailyMailCount queries the database for the total number of recipients
-// for emails sent today, aligning with SES billing.
+// for emails sent today that had a 'Success' status, aligning with SES billing logic.
 func GetDailyMailCount(db *sql.DB) (int, error) {
 	var count int
 	query := `
 		SELECT COALESCE(SUM(recipient_count), 0) FROM email_logs
 		WHERE (sent_at AT TIME ZONE 'Asia/Kolkata')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
+		  AND status = 'Success' -- CRITICAL CHANGE: Only count successful sends
 	`
 	err := db.QueryRow(query).Scan(&count)
 	if err != nil {
@@ -23,6 +24,7 @@ func GetDailyMailCount(db *sql.DB) (int, error) {
 
 // GetEmailStatusDistribution retrieves the distribution of email statuses (Success/Failed)
 // based on the sum of recipient counts for the current IST day.
+// This function should NOT change, as it needs to show ALL statuses.
 func GetEmailStatusDistribution(db *sql.DB) (map[string]int, error) {
 	statusCounts := make(map[string]int)
 	query := `
@@ -49,7 +51,6 @@ func GetEmailStatusDistribution(db *sql.DB) (map[string]int, error) {
 		return nil, fmt.Errorf("error iterating over status distribution rows: %w", err)
 	}
 
-	// Ensure both keys exist even if count is 0 for consistent JSON
 	if _, ok := statusCounts["Success"]; !ok {
 		statusCounts["Success"] = 0
 	}
@@ -60,7 +61,7 @@ func GetEmailStatusDistribution(db *sql.DB) (map[string]int, error) {
 	return statusCounts, nil
 }
 
-// GetDailySendsOverPeriod retrieves the total recipient count for emails sent per day
+// GetDailySendsOverPeriod retrieves the total recipient count for successful emails sent per day
 // for the last 'days' days.
 func GetDailySendsOverPeriod(db *sql.DB, days int) (map[string]int, error) {
 	dailySends := make(map[string]int)
@@ -75,6 +76,7 @@ func GetDailySendsOverPeriod(db *sql.DB, days int) (map[string]int, error) {
 		SELECT (sent_at AT TIME ZONE 'Asia/Kolkata')::date as log_date, COALESCE(SUM(recipient_count), 0)
 		FROM email_logs
 		WHERE (sent_at AT TIME ZONE 'Asia/Kolkata')::date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date - INTERVAL '%d days'
+		  AND status = 'Success' -- CRITICAL CHANGE: Only count successful sends
 		GROUP BY log_date
 		ORDER BY log_date ASC
 	`, days-1)
