@@ -32,7 +32,7 @@ func NewMailService(cfg *config.Config, db *sql.DB) *MailService {
 }
 
 // SendEmailAndLog sends emails as HTML and logs a plain text preview.
-// It now logs an entry for each recipient (TO, CC, BCC) to align with SES counting.
+// It now stores the recipient count in the database for each send action.
 func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subject, body string) error {
 	status := "Failed"
 	var err error
@@ -44,29 +44,20 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	}
 	
 	// --- CRITICAL CHANGE: Calculate total recipient count ---
-	// This count will determine how many rows are inserted into the logs.
+	// This count will be stored in the `recipient_count` column.
 	recipientCount := 1 // Always at least one for the 'To' recipient
 	recipientCount += len(cc)
 	recipientCount += len(bcc)
 	// --- END CRITICAL CHANGE ---
 
 	defer func() {
-		// --- CRITICAL CHANGE: Insert `recipientCount` number of rows ---
-		// This makes your app's internal daily mail count (which uses COUNT(*))
-		// align with how AWS SES counts recipients.
-		for i := 0; i < recipientCount; i++ {
-			// We log the primary 'To' recipient for each entry.
-			// More granular logging (e.g., individual CC/BCC addresses) would require
-			// schema changes or more complex logic here.
-			_, dbErr := s.db.Exec(
-				"INSERT INTO email_logs (sent_to, subject, body_preview, status, sent_at) VALUES ($1, $2, $3, $4, $5)",
-				to, subject, bodyPreview, status, time.Now(),
-			)
-			if dbErr != nil {
-				log.Printf("CRITICAL: Failed to log email attempt to DB for recipient %d/%d: %v", i+1, recipientCount, dbErr)
-				// Note: If DB logging is critical, consider more robust error handling
-				// (e.g., retry, alert) for actual production systems.
-			}
+		// Insert ONE row per send action, storing the calculated `recipient_count`.
+		_, dbErr := s.db.Exec(
+			"INSERT INTO email_logs (sent_to, subject, body_preview, status, recipient_count, sent_at) VALUES ($1, $2, $3, $4, $5, $6)",
+			to, subject, bodyPreview, status, recipientCount, time.Now(), // recipient_count is now stored
+		)
+		if dbErr != nil {
+			log.Printf("CRITICAL: Failed to log email attempt to DB: %v", dbErr)
 		}
 	}()
 
