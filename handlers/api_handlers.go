@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json" // This is used by SendMailRequest and the response helpers
+	"encoding/json"
 	"log"
-	// "mime/multipart" // REMOVED: Not needed for JSON payloads // Needed for Files
 	"net/http"
-	"strconv"  //  fundamental package for handling data type conversions
+	"strconv"
+	"strings" // ADDED: For strings.Split
 	"time"
 
 	"smtp-mailer/config"
@@ -15,7 +15,8 @@ import (
 	"smtp-mailer/utils"
 )
 
-// SendMailRequest struct for parsing the JSON payload (needed again).
+// SendMailRequest struct for parsing the JSON payload.
+// This is used by GetLogs and other handlers, not directly by the current SendMailHandler.
 type SendMailRequest struct {
 	To      string   `json:"to"`
 	CC      []string `json:"cc,omitempty"`
@@ -24,7 +25,7 @@ type SendMailRequest struct {
 	Body    string   `json:"body"`
 }
 
-// SendMailHandler is reverted to handle standard JSON requests for sending emails.
+// SendMailHandler is updated to parse 'to' field as comma-separated recipients.
 func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -34,15 +35,24 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 
 		// Revert to decoding a JSON body from the request.
 		var req SendMailRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil { // Uses encoding/json
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			errorResponse(w, "Invalid request payload", http.StatusBadRequest)
 			return
 		}
 
-		if req.To == "" || req.Subject == "" || req.Body == "" {
+		// --- CRITICAL CHANGE: Split 'to' field by comma for multiple recipients ---
+		toRecipients := strings.Split(req.To, ",")
+		// Trim whitespace from each recipient and filter out empty strings
+		for i := range toRecipients {
+			toRecipients[i] = strings.TrimSpace(toRecipients[i])
+		}
+		toRecipients = filterEmptyStrings(toRecipients) // Helper to remove any empty strings from split
+		
+		if len(toRecipients) == 0 || req.Subject == "" || req.Body == "" { // Check if 'to' list is empty after split
 			errorResponse(w, "Fields 'to', 'subject', and 'body' are required.", http.StatusBadRequest)
 			return
 		}
+		// --- END CRITICAL CHANGE ---
 
 		// Check daily mail limit.
 		currentCount, err := utils.GetDailyMailCount(db)
@@ -52,34 +62,49 @@ func SendMailHandler(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		if currentCount >= cfg.DailyMailLimit {
-			errorResponse(w, "Daily mail limit exceeded.", http.StatusForbidden)
+		// Calculate total recipients for this send action.
+		totalRecipients := len(toRecipients) + len(req.CC) + len(req.BCC)
+		
+		if (currentCount + totalRecipients) > cfg.DailyMailLimit { // Check if adding these recipients exceeds limit
+			errorResponse(w, "Daily mail limit exceeded for this request.", http.StatusForbidden)
 			return
 		}
 
-		// Call the email service without the files argument.
+		// Call the email service, passing the split 'toRecipients'.
 		emailService := services.NewMailService(cfg, db)
-		err = emailService.SendEmailAndLog(req.To, req.CC, req.BCC, req.Subject, req.Body) // 'files' argument removed
+		err = emailService.SendEmailAndLog(toRecipients, req.CC, req.BCC, req.Subject, req.Body)
 
 		if err != nil {
-			log.Printf("Error sending email to %s: %v", req.To, err)
+			log.Printf("Error sending email to %v: %v", toRecipients, err) // Log multiple recipients
 			errorResponse(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		log.Printf("Email sent successfully to %s", req.To)
-		successResponse(w, "Email sent successfully", nil) // Uses encoding/json
+		log.Printf("Email sent successfully to %v", toRecipients) // Log multiple recipients
+		successResponse(w, "Email sent successfully", nil)
 	}
 }
 
-// GetLogsHandler remains the same.
+// Helper function to remove empty strings from a slice of strings.
+func filterEmptyStrings(s []string) []string {
+    var r []string
+    for _, str := range s {
+        if str != "" {
+            r = append(r, str)
+        }
+    }
+    return r
+}
+
+// --- Other handlers (GetLogs, GetLimit, etc.) remain unchanged ---
+
 func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		queryDateStr := r.URL.Query().Get("date")
 		limitStr := r.URL.Query().Get("limit")
 		var query string
 		var args []interface{}
-		baseQuery := "SELECT id, sent_to, subject, body_preview, status, sent_at FROM email_logs"
+		baseQuery := "SELECT id, sent_to, subject, body_preview, status, sent_at, recipient_count FROM email_logs" // ADDED recipient_count
 		orderBy := "ORDER BY sent_at DESC"
 		defaultLimit := 50
 		if queryDateStr != "" {
@@ -122,7 +147,7 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 		var logs []database.EmailLog
 		for rows.Next() {
 			var logEntry database.EmailLog
-			if err := rows.Scan(&logEntry.ID, &logEntry.SentTo, &logEntry.Subject, &logEntry.BodyPreview, &logEntry.Status, &logEntry.SentAt); err != nil {
+			if err := rows.Scan(&logEntry.ID, &logEntry.SentTo, &logEntry.Subject, &logEntry.BodyPreview, &logEntry.Status, &logEntry.SentAt, &logEntry.RecipientCount); err != nil { // ADDED recipient_count
 				log.Printf("Error scanning email log row: %v", err)
 				continue
 			}
@@ -133,11 +158,10 @@ func GetLogsHandler(db *sql.DB) http.HandlerFunc {
 			errorResponse(w, "Internal server error fetching logs", http.StatusInternalServerError)
 			return
 		}
-		successResponse(w, "Email logs retrieved successfully", logs) // Uses encoding/json
+		successResponse(w, "Email logs retrieved successfully", logs)
 	}
 }
 
-// GetDailyLimitHandler remains the same.
 func GetDailyLimitHandler(db *sql.DB, dailyLimit int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		currentCount, err := utils.GetDailyMailCount(db)
@@ -146,11 +170,10 @@ func GetDailyLimitHandler(db *sql.DB, dailyLimit int) http.HandlerFunc {
 			return
 		}
 		data := map[string]interface{}{"current_count": currentCount, "limit": dailyLimit, "remaining": dailyLimit - currentCount}
-		successResponse(w, "Daily mail limit status retrieved", data) // Uses encoding/json
+		successResponse(w, "Daily mail limit status retrieved", data)
 	}
 }
 
-// GetEmailStatsHandler remains the same.
 func GetEmailStatsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		statusCounts, err := utils.GetEmailStatusDistribution(db)
@@ -158,11 +181,10 @@ func GetEmailStatsHandler(db *sql.DB) http.HandlerFunc {
 			errorResponse(w, "Internal server error fetching email stats", http.StatusInternalServerError)
 			return
 		}
-		successResponse(w, "Email status distribution retrieved", statusCounts) // Uses encoding/json
+		successResponse(w, "Email status distribution retrieved", statusCounts)
 	}
 }
 
-// GetDailySendsHandler remains the same.
 func GetDailySendsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		daysStr := r.URL.Query().Get("days")
@@ -177,6 +199,6 @@ func GetDailySendsHandler(db *sql.DB) http.HandlerFunc {
 			errorResponse(w, "Internal server error fetching daily sends", http.StatusInternalServerError)
 			return
 		}
-		successResponse(w, "Daily sends over period retrieved", dailySends) // Uses encoding/json
+		successResponse(w, "Daily sends over period retrieved", dailySends)
 	}
 }
