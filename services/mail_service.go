@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/smtp" // RE-ADDED: Required by sendEmailNoAuth function
 	"regexp"
 	"strconv"
 	"strings"
@@ -44,7 +45,6 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	}
 	
 	// --- CRITICAL CHANGE: Calculate total recipient count ---
-	// This count will be stored in the `recipient_count` column.
 	recipientCount := 1 // Always at least one for the 'To' recipient
 	recipientCount += len(cc)
 	recipientCount += len(bcc)
@@ -110,7 +110,7 @@ func (s *MailService) SendEmailAndLog(to string, cc []string, bcc []string, subj
 	return nil
 }
 
-// sendEmailNoAuth is an illustrative function not used by the main logic.
+// sendEmailNoAuth is an illustrative function that uses net/smtp.
 func sendEmailNoAuth(host, port, from, to, subject, body string) error {
 	msg := []byte("To: " + to + "\r\n" +
 		"From: " + from + "\r\n" +
@@ -118,8 +118,9 @@ func sendEmailNoAuth(host, port, from, to, subject, body string) error {
 		"\r\n" +
 		body + "\r\n")
 
-	auth := smtp.PlainAuth("", "", "", host) // No authentication
-	err := smtp.SendMail(fmt.Sprintf("%s:%s", host, port), auth, from, []string{to}, msg)
+	// The `smtp` package here requires the "net/smtp" import.
+	auth := smtp.PlainAuth("", "", "", host) // Uses net/smtp
+	err := smtp.SendMail(fmt.Sprintf("%s:%s", host, port), auth, from, []string{to}, msg) // Uses net/smtp
 	if err != nil {
 		return fmt.Errorf("error sending mail (no auth): %w", err)
 	}
